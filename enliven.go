@@ -153,8 +153,6 @@ func cleanPath(p string) string {
 		p = "/" + p
 	}
 	np := path.Clean(p)
-	// path.Clean removes trailing slash except for root;
-	// put the trailing slash back if necessary.
 	if p[len(p)-1] == '/' && np != "/" {
 		np += "/"
 	}
@@ -202,6 +200,7 @@ func (ev *Enliven) Run(port string) {
 	ev.Use(HandlerFunc(routeHandlerFunc))
 	fmt.Println("Server is listening on port " + port + ".")
 	http.ListenAndServe(":"+port, ev.middleware)
+	fmt.Println("Server has shut down.")
 }
 
 func main() {
@@ -215,7 +214,7 @@ func main() {
 		rw.Write([]byte("It's working!!"))
 	}))
 
-	port := flag.String("port", "8080", "The port the server should listen on.")
+	port := flag.String("port", "8000", "The port the server should listen on.")
 	flag.Parse()
 
 	ev.Run(*port)
