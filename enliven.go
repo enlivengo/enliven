@@ -48,42 +48,46 @@ func (m Middleware) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	m.handler.ServeHTTP(rw, r, m.next.ServeHTTP, enliven)
 }
 
-// EnlivenConfig holds config values
-type EnlivenConfig struct {
-	DatabaseDriver   string
-	ConnectionString string
-}
-
 // New (constructor) gets a new instance of enliven.
-func New(ec *EnlivenConfig) *Enliven {
+func New(config map[string]string) *Enliven {
 	r := mux.NewRouter()
 
 	enliven = Enliven{
-		config:        ec,
+		services:      make(map[string]interface{}),
 		router:        r,
 		routeHandlers: make(map[string]RouteHandlerFunc),
 	}
 
-	if len(ec.DatabaseDriver) > 0 && len(ec.ConnectionString) > 0 {
-		enliven.InitDatabase()
-	}
+	enliven.addConfig(config)
+	enliven.addDatabase()
 
 	return &enliven
 }
 
-// Enliven is....Enliven
-type Enliven struct {
-	config        *EnlivenConfig
-	database      *gorm.DB
-	router        *mux.Router
-	routeHandlers map[string]RouteHandlerFunc
-	middleware    Middleware
-	handlers      []MiddlewareHandler
+// addConfig created and registers the app config
+func (ev *Enliven) addConfig(suppliedConfig map[string]string) {
+	var enlivenConfig = map[string]string{
+		"db.driver":           "",
+		"db.connectionString": "",
+		"server.port":         "8000",
+	}
+
+	for key, value := range suppliedConfig {
+		enlivenConfig[key] = value
+	}
+
+	ev.Register("config", enlivenConfig)
 }
 
-// InitDatabase Initializes a database given the values from the EnlivenConfig
-func (ev *Enliven) InitDatabase() {
-	db, err := gorm.Open(ev.config.DatabaseDriver, ev.config.ConnectionString)
+// addDatabase Initializes a database given the values from the EnlivenConfig
+func (ev *Enliven) addDatabase() {
+	config := ev.GetConfig()
+
+	if len(config["db.driver"]) == 0 || len(config["db.connectionString"]) == 0 {
+		return
+	}
+
+	db, err := gorm.Open(config["db.driver"], config["db.connectionString"])
 
 	// Making sure we got a database instance
 	if err != nil {
@@ -96,20 +100,60 @@ func (ev *Enliven) InitDatabase() {
 		panic(err)
 	}
 
-	ev.database = db
+	ev.Register("database", db)
 }
 
-// Use adds a Handler onto the middleware stack.
+// Enliven is....Enliven
+type Enliven struct {
+	services      map[string]interface{}
+	router        *mux.Router
+	routeHandlers map[string]RouteHandlerFunc
+	middleware    Middleware
+	handlers      []MiddlewareHandler
+}
+
+// Register registers an enliven service or dependency
+func (ev *Enliven) Register(name string, service interface{}) {
+	if _, ok := ev.services[name]; ok {
+		panic("The service name you are attempting to register has already been registered.")
+	}
+
+	ev.services[name] = service
+}
+
+// Get returns an enliven service or dependency
+func (ev *Enliven) Get(name string) interface{} {
+	if _, ok := ev.services[name]; ok {
+		return ev.services[name]
+	}
+	return nil
+}
+
+// GetDatabase Gets an instance of the database
+func (ev *Enliven) GetDatabase() *gorm.DB {
+	if db, ok := ev.Get("database").(*gorm.DB); ok {
+		return db
+	}
+	return nil
+}
+
+// GetConfig Gets an instance of the database
+func (ev *Enliven) GetConfig() map[string]string {
+	config := ev.Get("config").(map[string]string)
+	return config
+}
+
+// AddMiddlewareHandler adds a Handler onto the middleware stack.
 // Copied w/ alterations from github.com/codegangsta/negroni
-func (ev *Enliven) Use(handler MiddlewareHandler) {
+func (ev *Enliven) AddMiddlewareHandler(handler MiddlewareHandler) {
 	ev.handlers = append(ev.handlers, handler)
 	ev.middleware = ev.buildMiddleware(ev.handlers)
 }
 
-// UseFunc adds a HandlerFunc onto the middleware stack.
+// AddMiddleware adds a HandlerFunc onto the middleware stack.
 // Copied w/ alterations from github.com/codegangsta/negroni
-func (ev *Enliven) UseFunc(handlerFunc func(rw http.ResponseWriter, r *http.Request, next http.HandlerFunc, ev Enliven)) {
-	ev.Use(HandlerFunc(handlerFunc))
+func (ev *Enliven) AddMiddleware(handlerFunc func(rw http.ResponseWriter, r *http.Request, next http.HandlerFunc, ev Enliven)) {
+	ev.AddMiddlewareHandler(HandlerFunc(handlerFunc))
 }
 
 // Copied w/ alterations from github.com/codegangsta/negroni
@@ -160,6 +204,7 @@ func cleanPath(p string) string {
 }
 
 // Copied w/ many alterations from github.com/gorilla/mux
+// Hijacks the abilities of mux to add our DI handling to route handlers
 func routeHandlerFunc(rw http.ResponseWriter, r *http.Request, next http.HandlerFunc, ev Enliven) {
 
 	// Clean path to canonical form and redirect.
@@ -197,17 +242,17 @@ func routeHandlerFunc(rw http.ResponseWriter, r *http.Request, next http.Handler
 
 // Run executes the Enliven http server
 func (ev *Enliven) Run(port string) {
-	ev.Use(HandlerFunc(routeHandlerFunc))
+	// Adding our route handler as the last piece of middleware
+	ev.AddMiddlewareHandler(HandlerFunc(routeHandlerFunc))
+
 	fmt.Println("Server is listening on port " + port + ".")
 	http.ListenAndServe(":"+port, ev.middleware)
 	fmt.Println("Server has shut down.")
 }
 
+// Example/Test usage
 func main() {
-	ev := New(&EnlivenConfig{
-		DatabaseDriver:   "",
-		ConnectionString: "",
-	})
+	ev := New(make(map[string]string))
 
 	ev.AddRoute("/", RouteHandlerFunc(func(rw http.ResponseWriter, r *http.Request, ev Enliven) {
 		rw.Header().Set("Content-Type", "text/plain")
