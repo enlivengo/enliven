@@ -1,7 +1,6 @@
-package main
+package enliven
 
 import (
-	"flag"
 	"fmt"
 	"net/http"
 	"path"
@@ -9,6 +8,8 @@ import (
 	"github.com/gorilla/context"
 	"github.com/gorilla/mux"
 	"github.com/jinzhu/gorm"
+
+	// Adding DB requirements.
 	_ "github.com/jinzhu/gorm/dialects/mssql"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
@@ -17,6 +18,12 @@ import (
 
 // This is an accesible
 var enliven Enliven
+
+// Plugin is an interface for writing Enliven plugins
+// Plugins are basically packaged enliven setup code
+type Plugin interface {
+	Initialize(ev *Enliven)
+}
 
 // MiddlewareHandler is an interface to be used when writing Middleware
 // Copied w/ alterations from github.com/codegangsta/negroni
@@ -48,24 +55,30 @@ func (m Middleware) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	m.handler.ServeHTTP(rw, r, m.next.ServeHTTP, enliven)
 }
 
+// Enliven is....Enliven
+type Enliven struct {
+	services      map[string]interface{}
+	routeHandlers map[string]RouteHandlerFunc
+	middleware    Middleware
+	handlers      []MiddlewareHandler
+}
+
 // New (constructor) gets a new instance of enliven.
 func New(config map[string]string) *Enliven {
-	r := mux.NewRouter()
-
 	enliven = Enliven{
 		services:      make(map[string]interface{}),
-		router:        r,
 		routeHandlers: make(map[string]RouteHandlerFunc),
 	}
 
-	enliven.addConfig(config)
-	enliven.addDatabase()
+	enliven.Register("router", mux.NewRouter())
+	enliven.registerConfig(config)
+	enliven.registerDatabase()
 
 	return &enliven
 }
 
 // addConfig created and registers the app config
-func (ev *Enliven) addConfig(suppliedConfig map[string]string) {
+func (ev *Enliven) registerConfig(suppliedConfig map[string]string) {
 	var enlivenConfig = map[string]string{
 		"db.driver":           "",
 		"db.connectionString": "",
@@ -80,7 +93,7 @@ func (ev *Enliven) addConfig(suppliedConfig map[string]string) {
 }
 
 // addDatabase Initializes a database given the values from the EnlivenConfig
-func (ev *Enliven) addDatabase() {
+func (ev *Enliven) registerDatabase() {
 	config := ev.GetConfig()
 
 	if len(config["db.driver"]) == 0 || len(config["db.connectionString"]) == 0 {
@@ -103,15 +116,6 @@ func (ev *Enliven) addDatabase() {
 	ev.Register("database", db)
 }
 
-// Enliven is....Enliven
-type Enliven struct {
-	services      map[string]interface{}
-	router        *mux.Router
-	routeHandlers map[string]RouteHandlerFunc
-	middleware    Middleware
-	handlers      []MiddlewareHandler
-}
-
 // Register registers an enliven service or dependency
 func (ev *Enliven) Register(name string, service interface{}) {
 	if _, ok := ev.services[name]; ok {
@@ -129,6 +133,11 @@ func (ev *Enliven) Get(name string) interface{} {
 	return nil
 }
 
+// InitPlugin initializes a provided plugin
+func (ev *Enliven) InitPlugin(plugin Plugin) {
+	plugin.Initialize(ev)
+}
+
 // GetDatabase Gets an instance of the database
 func (ev *Enliven) GetDatabase() *gorm.DB {
 	if db, ok := ev.Get("database").(*gorm.DB); ok {
@@ -137,10 +146,16 @@ func (ev *Enliven) GetDatabase() *gorm.DB {
 	return nil
 }
 
-// GetConfig Gets an instance of the database
+// GetConfig Gets an instance of the config
 func (ev *Enliven) GetConfig() map[string]string {
 	config := ev.Get("config").(map[string]string)
 	return config
+}
+
+// GetRouter Gets the instance of the router
+func (ev *Enliven) GetRouter() *mux.Router {
+	router := ev.Get("router").(*mux.Router)
+	return router
 }
 
 // AddMiddlewareHandler adds a Handler onto the middleware stack.
@@ -175,17 +190,12 @@ func (ev *Enliven) buildMiddleware(handlers []MiddlewareHandler) Middleware {
 	return Middleware{handlers[0], &next}
 }
 
-// GetRouter returns our mux instance
-func (ev *Enliven) GetRouter() *mux.Router {
-	return ev.router
-}
-
 // AddRoute Registers a handler for a given route.
 // We register a dummy route with mux, and then store the provided handler
 // which we'll use later in order to inject dependencies into the handler func.
 func (ev *Enliven) AddRoute(path string, rhf RouteHandlerFunc) *mux.Route {
 	ev.routeHandlers[path] = rhf
-	return ev.router.HandleFunc(path, func(http.ResponseWriter, *http.Request) {})
+	return ev.GetRouter().HandleFunc(path, func(http.ResponseWriter, *http.Request) {})
 }
 
 // Copied from github.com/gorilla/mux
@@ -224,17 +234,21 @@ func routeHandlerFunc(rw http.ResponseWriter, r *http.Request, next http.Handler
 
 	var match mux.RouteMatch
 	var handler http.Handler
-	if enliven.router.Match(r, &match) {
+	if enliven.GetRouter().Match(r, &match) {
 		handler = match.Handler
 	}
 	if handler == nil {
 		handler := http.NotFoundHandler()
 		handler.ServeHTTP(rw, r)
 	} else {
-		// We use the request path to look up our stored route handler
-		routeHandler := ev.routeHandlers[r.URL.Path]
-		// Calling the route handler with Enliven passed in.
-		routeHandler(rw, r, ev)
+		// We use the request path to look up our stored route handler if it exists
+		if routeHandler, ok := ev.routeHandlers[r.URL.Path]; ok {
+			// Calling the route handler with Enliven passed in.
+			routeHandler(rw, r, ev)
+		} else {
+			// Using handler request handling otherwise.
+			handler.ServeHTTP(rw, r)
+		}
 	}
 
 	next(rw, r)
@@ -248,19 +262,4 @@ func (ev *Enliven) Run(port string) {
 	fmt.Println("Server is listening on port " + port + ".")
 	http.ListenAndServe(":"+port, ev.middleware)
 	fmt.Println("Server has shut down.")
-}
-
-// Example/Test usage
-func main() {
-	ev := New(make(map[string]string))
-
-	ev.AddRoute("/", RouteHandlerFunc(func(rw http.ResponseWriter, r *http.Request, ev Enliven) {
-		rw.Header().Set("Content-Type", "text/plain")
-		rw.Write([]byte("It's working!!"))
-	}))
-
-	port := flag.String("port", "8000", "The port the server should listen on.")
-	flag.Parse()
-
-	ev.Run(*port)
 }
