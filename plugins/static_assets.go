@@ -6,7 +6,7 @@ import (
 	"github.com/hickeroar/enliven"
 )
 
-// NewStaticAssetPlugin Creates a new static asset middleware item and
+// NewStaticAssetPlugin Creates a new static asset plugin instance
 func NewStaticAssetPlugin(route string, path string) *StaticAssetPlugin {
 	return &StaticAssetPlugin{
 		route: route,

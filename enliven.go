@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"path"
+	"strings"
 
 	"github.com/gorilla/context"
 	"github.com/gorilla/mux"
@@ -80,9 +81,16 @@ func New(config map[string]string) *Enliven {
 // addConfig created and registers the app config
 func (ev *Enliven) registerConfig(suppliedConfig map[string]string) {
 	var enlivenConfig = map[string]string{
-		"db.driver":           "",
-		"db.connectionString": "",
-		"server.port":         "8000",
+		"db.driver":     "",
+		"db.host":       "",
+		"db.user":       "",
+		"db.dbname":     "",
+		"db.password":   "",
+		"db.sslmode":    "disable",
+		"db.port":       "",
+		"db.connString": "",
+
+		"server.port": "8000",
 	}
 
 	for key, value := range suppliedConfig {
@@ -96,11 +104,68 @@ func (ev *Enliven) registerConfig(suppliedConfig map[string]string) {
 func (ev *Enliven) registerDatabase() {
 	config := ev.GetConfig()
 
-	if len(config["db.driver"]) == 0 || len(config["db.connectionString"]) == 0 {
+	var driver string
+	allowedDrivers := [4]string{"postgres", "mysql", "sqlite3", "mssql"}
+
+	// Making sure the specified driver is in the list if allowed drivers
+	for i := 0; i < 4; i++ {
+		if allowedDrivers[i] == config["db.driver"] {
+			driver = config["db.driver"]
+			break
+		}
+	}
+
+	// If we didn't set a driver, we return here.
+	if driver == "" {
 		return
 	}
 
-	db, err := gorm.Open(config["db.driver"], config["db.connectionString"])
+	var connString string
+
+	// Someone can specify a whole connection string, or the parts of it
+	if config["db.connString"] != "" {
+		connString = config["db.connString"]
+	} else {
+		// driver specific connection string addons
+		switch driver {
+
+		case "sqlite3":
+			// If the driver is sqlite3, but there wasn't a conn string, we return.
+			if config["db.connString"] == "" {
+				return
+			}
+
+		case "mysql", "mssql":
+			connString = config["db.user"] + ":" + config["db.password"] + "@" + config["db.host"]
+
+			// Adding a port if one was provided
+			if len(config["db.port"]) > 0 {
+				connString += ":" + config["db.port"]
+			}
+
+			connString += "/" + config["db.dbname"]
+
+			if driver == "mysql" {
+				connString += "?charset=utf8&parseTime=True&loc=Local"
+			}
+
+		case "postgres":
+			var connStringParts []string
+			connStringParts = append(connStringParts, "host="+config["db.host"])
+			connStringParts = append(connStringParts, "user="+config["db.user"])
+			connStringParts = append(connStringParts, "dbname="+config["db.dbname"])
+			connStringParts = append(connStringParts, "sslmode="+config["db.sslmode"])
+			connStringParts = append(connStringParts, "password="+config["db.password"])
+
+			if len(config["db.port"]) > 0 {
+				connStringParts = append(connStringParts, "port="+config["db.port"])
+			}
+
+			connString = strings.Join(connStringParts, " ")
+		}
+	}
+
+	db, err := gorm.Open(driver, connString)
 
 	// Making sure we got a database instance
 	if err != nil {
