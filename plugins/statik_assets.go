@@ -19,7 +19,7 @@ type StatikAssetPlugin struct {
 	route string
 }
 
-// Initialize sets up our plugin to handle static asset requests
+// Initialize sets up our plugin to handle embedded static asset requests
 func (sap *StatikAssetPlugin) Initialize(ev *enliven.Enliven) {
 	router := ev.GetRouter()
 	statikFS, _ := fs.New()

@@ -17,51 +17,109 @@ import (
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
 )
 
-// This is an accesible
+// We'll use this to create and insert the initial enliven instance into the handlers
 var enliven Enliven
 
-// Plugin is an interface for writing Enliven plugins
+// --------------------------------------------------
+
+// IPlugin is an interface for writing Enliven plugins
 // Plugins are basically packaged enliven setup code
-type Plugin interface {
+type IPlugin interface {
 	Initialize(ev *Enliven)
 }
 
-// MiddlewareHandler is an interface to be used when writing Middleware
-// Copied w/ alterations from github.com/codegangsta/negroni
-type MiddlewareHandler interface {
-	ServeHTTP(rw http.ResponseWriter, r *http.Request, next http.HandlerFunc, ev Enliven)
+// ISession represents a session that session middleware must implement
+type ISession interface {
+	Set(key string, value string) error
+	Get(key string) string
+	Delete(key string) error
+	Destroy() error
+	SessionID() string
 }
+
+// IMiddlewareHandler is an interface to be used when writing Middleware
+// Copied w/ alterations from github.com/codegangsta/negroni
+type IMiddlewareHandler interface {
+	ServeHTTP(rw http.ResponseWriter, r *http.Request, ev Enliven, ctx *Context, next NextHandlerFunc)
+}
+
+// --------------------------------------------------
+
+// CHandler Handles injecting the initial request context before passing handling on to the Middleware struct
+type CHandler func(rw http.ResponseWriter, r *http.Request, ev Enliven, ctx *Context)
+
+// ServeHTTP is the first handler that gets hit when a request comes in.
+func (ch CHandler) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
+	ctx := &Context{
+		Items: make(map[string]string),
+	}
+	ch(rw, r, enliven, ctx)
+}
+
+// ContextHandler sets up serving the first request, and the handing off of subsequent requests to the Middleware struct
+func ContextHandler(h Middleware) CHandler {
+	return CHandler(func(rw http.ResponseWriter, r *http.Request, ev Enliven, ctx *Context) {
+		h.handler.ServeHTTP(rw, r, enliven, ctx, h.next.ServeHTTP)
+	})
+}
+
+// --------------------------------------------------
+
+// NextHandlerFunc allow use of ordinary functions middleware handlers
+// Copied w/ alterations from github.com/codegangsta/negroni
+type NextHandlerFunc func(rw http.ResponseWriter, r *http.Request, ev Enliven, ctx *Context)
+
+// Copied w/ alterations from github.com/codegangsta/negroni
+func (nh NextHandlerFunc) ServeHTTP(rw http.ResponseWriter, r *http.Request, ev Enliven, ctx *Context) {
+	nh(rw, r, ev, ctx)
+}
+
+// --------------------------------------------------
 
 // HandlerFunc allow use of ordinary functions middleware handlers
 // Copied w/ alterations from github.com/codegangsta/negroni
-type HandlerFunc func(rw http.ResponseWriter, r *http.Request, next http.HandlerFunc, ev Enliven)
+type HandlerFunc func(rw http.ResponseWriter, r *http.Request, ev Enliven, ctx *Context, next NextHandlerFunc)
 
 // Copied w/ alterations from github.com/codegangsta/negroni
-func (h HandlerFunc) ServeHTTP(rw http.ResponseWriter, r *http.Request, next http.HandlerFunc, ev Enliven) {
-	h(rw, r, next, enliven)
+func (h HandlerFunc) ServeHTTP(rw http.ResponseWriter, r *http.Request, ev Enliven, ctx *Context, next NextHandlerFunc) {
+	h(rw, r, ev, ctx, next)
 }
 
+// --------------------------------------------------
+
 // RouteHandlerFunc is an interface to be used when writing route handler functions
-type RouteHandlerFunc func(rw http.ResponseWriter, r *http.Request, ev Enliven)
+type RouteHandlerFunc func(rw http.ResponseWriter, r *http.Request, ev Enliven, ctx *Context)
+
+// --------------------------------------------------
+
+// Context stores context variables and the session that will be passed to requests
+type Context struct {
+	Session ISession
+	Items   map[string]string
+}
+
+// --------------------------------------------------
 
 // Middleware Represents a piece of middlewear
 // Copied w/ alterations from github.com/codegangsta/negroni
 type Middleware struct {
-	handler MiddlewareHandler
+	handler IMiddlewareHandler
 	next    *Middleware
 }
 
 // Copied w/ alterations from github.com/codegangsta/negroni
-func (m Middleware) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
-	m.handler.ServeHTTP(rw, r, m.next.ServeHTTP, enliven)
+func (m Middleware) ServeHTTP(rw http.ResponseWriter, r *http.Request, ev Enliven, ctx *Context) {
+	m.handler.ServeHTTP(rw, r, ev, ctx, m.next.ServeHTTP)
 }
+
+// --------------------------------------------------
 
 // Enliven is....Enliven
 type Enliven struct {
 	services      map[string]interface{}
 	routeHandlers map[string]RouteHandlerFunc
 	middleware    Middleware
-	handlers      []MiddlewareHandler
+	handlers      []IMiddlewareHandler
 }
 
 // New (constructor) gets a new instance of enliven.
@@ -199,7 +257,7 @@ func (ev *Enliven) Get(name string) interface{} {
 }
 
 // InitPlugin initializes a provided plugin
-func (ev *Enliven) InitPlugin(plugin Plugin) {
+func (ev *Enliven) InitPlugin(plugin IPlugin) {
 	plugin.Initialize(ev)
 }
 
@@ -225,23 +283,23 @@ func (ev *Enliven) GetRouter() *mux.Router {
 
 // AddMiddlewareHandler adds a Handler onto the middleware stack.
 // Copied w/ alterations from github.com/codegangsta/negroni
-func (ev *Enliven) AddMiddlewareHandler(handler MiddlewareHandler) {
+func (ev *Enliven) AddMiddlewareHandler(handler IMiddlewareHandler) {
 	ev.handlers = append(ev.handlers, handler)
 	ev.middleware = ev.buildMiddleware(ev.handlers)
 }
 
 // AddMiddleware adds a HandlerFunc onto the middleware stack.
 // Copied w/ alterations from github.com/codegangsta/negroni
-func (ev *Enliven) AddMiddleware(handlerFunc func(rw http.ResponseWriter, r *http.Request, next http.HandlerFunc, ev Enliven)) {
+func (ev *Enliven) AddMiddleware(handlerFunc func(rw http.ResponseWriter, r *http.Request, ev Enliven, ctx *Context, next NextHandlerFunc)) {
 	ev.AddMiddlewareHandler(HandlerFunc(handlerFunc))
 }
 
 // Copied w/ alterations from github.com/codegangsta/negroni
-func (ev *Enliven) buildMiddleware(handlers []MiddlewareHandler) Middleware {
+func (ev *Enliven) buildMiddleware(handlers []IMiddlewareHandler) Middleware {
 	var next Middleware
 
 	voidMiddleware := Middleware{
-		HandlerFunc(func(rw http.ResponseWriter, r *http.Request, next http.HandlerFunc, ev Enliven) {}), &Middleware{},
+		HandlerFunc(func(rw http.ResponseWriter, r *http.Request, ev Enliven, ctx *Context, next NextHandlerFunc) {}), &Middleware{},
 	}
 
 	if len(handlers) == 0 {
@@ -280,7 +338,7 @@ func cleanPath(p string) string {
 
 // Copied w/ many alterations from github.com/gorilla/mux
 // Hijacks the abilities of mux to add our DI handling to route handlers
-func routeHandlerFunc(rw http.ResponseWriter, r *http.Request, next http.HandlerFunc, ev Enliven) {
+func routeHandlerFunc(rw http.ResponseWriter, r *http.Request, ev Enliven, ctx *Context, next NextHandlerFunc) {
 
 	// Clean path to canonical form and redirect.
 	if p := cleanPath(r.URL.Path); p != r.URL.Path {
@@ -309,14 +367,14 @@ func routeHandlerFunc(rw http.ResponseWriter, r *http.Request, next http.Handler
 		// We use the request path to look up our stored route handler if it exists
 		if routeHandler, ok := ev.routeHandlers[r.URL.Path]; ok {
 			// Calling the route handler with Enliven passed in.
-			routeHandler(rw, r, ev)
+			routeHandler(rw, r, ev, ctx)
 		} else {
 			// Using handler request handling otherwise.
 			handler.ServeHTTP(rw, r)
 		}
 	}
 
-	next(rw, r)
+	next(rw, r, ev, ctx)
 }
 
 // Run executes the Enliven http server
@@ -325,6 +383,6 @@ func (ev *Enliven) Run(port string) {
 	ev.AddMiddlewareHandler(HandlerFunc(routeHandlerFunc))
 
 	fmt.Println("Server is listening on port " + port + ".")
-	http.ListenAndServe(":"+port, ev.middleware)
+	http.ListenAndServe(":"+port, ContextHandler(ev.middleware))
 	fmt.Println("Server has shut down.")
 }
