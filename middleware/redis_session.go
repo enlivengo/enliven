@@ -1,0 +1,114 @@
+package middleware
+
+import (
+	"encoding/base64"
+	"math/rand"
+	"net/http"
+	"time"
+
+	"github.com/hickeroar/enliven"
+	"gopkg.in/redis.v3"
+)
+
+// newRedisSession Produces a redis session instance
+func newRedisSession(sessID string, rClient *redis.Client, existing bool) *redisSession {
+	rSess := &redisSession{
+		redisClient: rClient,
+		sessionID:   sessID,
+	}
+
+	rSess.Bump(existing)
+
+	return rSess
+}
+
+// redisSession implements the enliven.Session interface
+type redisSession struct {
+	redisClient *redis.Client
+	sessionID   string
+}
+
+// Bump resets the current session's expiration date to 24 hours in the future
+// and sets the init time if this is a new session
+func (rs *redisSession) Bump(existing bool) {
+	if !existing {
+		rs.Set("init", time.Now().String())
+	}
+	// Setting the duration of the
+	rs.redisClient.Expire(rs.sessionID, time.Duration(24)*time.Hour)
+}
+
+// Set sets a session variable
+func (rs *redisSession) Set(key string, value string) error {
+	_, err := rs.redisClient.HSet(rs.sessionID, key, value).Result()
+	return err
+}
+
+// Get returns a session variable or empty string
+func (rs *redisSession) Get(key string) string {
+	value, err := rs.redisClient.HGet(rs.sessionID, key).Result()
+	if err != nil {
+		return ""
+	}
+	return value
+}
+
+// Delete removes a session variable
+func (rs *redisSession) Delete(key string) error {
+	_, err := rs.redisClient.HDel(rs.sessionID, key).Result()
+	return err
+}
+
+// Destroy deletes this session from redis
+func (rs *redisSession) Destroy() error {
+	_, err := rs.redisClient.Del(rs.sessionID).Result()
+	return err
+}
+
+// SessionID returns the current session id
+func (rs *redisSession) SessionID() string {
+	return rs.sessionID
+}
+
+// NewRedisSessionMiddleware generates an instance of RedisSessionMiddleware
+func NewRedisSessionMiddleware(address string, password string) *RedisSessionMiddleware {
+	return &RedisSessionMiddleware{
+		redisClient: redis.NewClient(&redis.Options{
+			Addr:     address,
+			Password: password,
+			DB:       0,
+		}),
+	}
+}
+
+// RedisSessionMiddleware manages sessions, using redis as the session storage mechanism
+type RedisSessionMiddleware struct {
+	redisClient *redis.Client
+}
+
+// generateSessionID produces a unique session id that we can store on the user's end as a cookie.
+func (rsm *RedisSessionMiddleware) generateSessionID() string {
+	rb := make([]byte, 32)
+	rand.Read(rb)
+	return base64.URLEncoding.EncodeToString(rb)
+}
+
+func (rsm *RedisSessionMiddleware) ServeHTTP(rw http.ResponseWriter, r *http.Request, ev enliven.Enliven, ctx *enliven.Context, next enliven.NextHandlerFunc) {
+	sessionID, err := r.Cookie("enlivenSession")
+	var existing bool
+	var sID string
+	// If there was no cookie, we create a session id, a session in redis, and a cookie to hold the ID.
+	if err == nil {
+		existing = true
+		sID = sessionID.Value
+	} else {
+		existing = false
+		sID = rsm.generateSessionID()
+		cookie := http.Cookie{Name: "enlivenSession", Value: sID}
+		http.SetCookie(rw, &cookie)
+	}
+
+	ctx.Session = newRedisSession(sID, rsm.redisClient, existing)
+
+	next(rw, r, ev, ctx)
+}
