@@ -143,7 +143,6 @@ func (fsm *FileSessionMiddleware) ServeHTTP(rw http.ResponseWriter, r *http.Requ
 	fsm.purgeSessions()
 
 	next(rw, r, ev, ctx)
-
 }
 
 func (fsm *FileSessionMiddleware) purgeSessions() {
