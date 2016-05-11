@@ -22,6 +22,17 @@ var enliven Enliven
 
 // --------------------------------------------------
 
+// MergeConfig takes a default config and merges a supplied one into it.
+func MergeConfig(defaultConfig map[string]string, suppliedConfig map[string]string) map[string]string {
+	for key, value := range suppliedConfig {
+		defaultConfig[key] = value
+	}
+
+	return defaultConfig
+}
+
+// --------------------------------------------------
+
 // IPlugin is an interface for writing Enliven plugins
 // Plugins are basically packaged enliven setup code
 type IPlugin interface {
@@ -129,7 +140,7 @@ func New(config map[string]string) *Enliven {
 		routeHandlers: make(map[string]RouteHandlerFunc),
 	}
 
-	enliven.Register("router", mux.NewRouter())
+	enliven.RegisterService("router", mux.NewRouter())
 	enliven.registerConfig(config)
 	enliven.registerDatabase()
 
@@ -151,11 +162,7 @@ func (ev *Enliven) registerConfig(suppliedConfig map[string]string) {
 		"server.port": "8000",
 	}
 
-	for key, value := range suppliedConfig {
-		enlivenConfig[key] = value
-	}
-
-	ev.Register("config", enlivenConfig)
+	ev.RegisterService("config", MergeConfig(enlivenConfig, suppliedConfig))
 }
 
 // addDatabase Initializes a database given the values from the EnlivenConfig
@@ -236,11 +243,11 @@ func (ev *Enliven) registerDatabase() {
 		panic(err)
 	}
 
-	ev.Register("database", db)
+	ev.RegisterService("database", db)
 }
 
-// Register registers an enliven service or dependency
-func (ev *Enliven) Register(name string, service interface{}) {
+// RegisterService registers an enliven service or dependency
+func (ev *Enliven) RegisterService(name string, service interface{}) {
 	if _, ok := ev.services[name]; ok {
 		panic("The service name you are attempting to register has already been registered.")
 	}
@@ -248,8 +255,8 @@ func (ev *Enliven) Register(name string, service interface{}) {
 	ev.services[name] = service
 }
 
-// Get returns an enliven service or dependency
-func (ev *Enliven) Get(name string) interface{} {
+// GetService returns an enliven service or dependency
+func (ev *Enliven) GetService(name string) interface{} {
 	if _, ok := ev.services[name]; ok {
 		return ev.services[name]
 	}
@@ -263,7 +270,7 @@ func (ev *Enliven) InitPlugin(plugin IPlugin) {
 
 // GetDatabase Gets an instance of the database
 func (ev *Enliven) GetDatabase() *gorm.DB {
-	if db, ok := ev.Get("database").(*gorm.DB); ok {
+	if db, ok := ev.GetService("database").(*gorm.DB); ok {
 		return db
 	}
 	return nil
@@ -271,27 +278,27 @@ func (ev *Enliven) GetDatabase() *gorm.DB {
 
 // GetConfig Gets an instance of the config
 func (ev *Enliven) GetConfig() map[string]string {
-	config := ev.Get("config").(map[string]string)
+	config := ev.GetService("config").(map[string]string)
 	return config
 }
 
 // GetRouter Gets the instance of the router
 func (ev *Enliven) GetRouter() *mux.Router {
-	router := ev.Get("router").(*mux.Router)
+	router := ev.GetService("router").(*mux.Router)
 	return router
 }
 
-// AddMiddlewareHandler adds a Handler onto the middleware stack.
+// AddMiddleware adds a Handler onto the middleware stack.
 // Copied w/ alterations from github.com/codegangsta/negroni
-func (ev *Enliven) AddMiddlewareHandler(handler IMiddlewareHandler) {
+func (ev *Enliven) AddMiddleware(handler IMiddlewareHandler) {
 	ev.handlers = append(ev.handlers, handler)
 	ev.middleware = ev.buildMiddleware(ev.handlers)
 }
 
-// AddMiddleware adds a HandlerFunc onto the middleware stack.
+// AddMiddlewareFunc adds a HandlerFunc onto the middleware stack.
 // Copied w/ alterations from github.com/codegangsta/negroni
-func (ev *Enliven) AddMiddleware(handlerFunc func(rw http.ResponseWriter, r *http.Request, ev Enliven, ctx *Context, next NextHandlerFunc)) {
-	ev.AddMiddlewareHandler(HandlerFunc(handlerFunc))
+func (ev *Enliven) AddMiddlewareFunc(handlerFunc func(rw http.ResponseWriter, r *http.Request, ev Enliven, ctx *Context, next NextHandlerFunc)) {
+	ev.AddMiddleware(HandlerFunc(handlerFunc))
 }
 
 // Copied w/ alterations from github.com/codegangsta/negroni
@@ -316,8 +323,8 @@ func (ev *Enliven) buildMiddleware(handlers []IMiddlewareHandler) Middleware {
 // AddRoute Registers a handler for a given route.
 // We register a dummy route with mux, and then store the provided handler
 // which we'll use later in order to inject dependencies into the handler func.
-func (ev *Enliven) AddRoute(path string, rhf RouteHandlerFunc) *mux.Route {
-	ev.routeHandlers[path] = rhf
+func (ev *Enliven) AddRoute(path string, rhf func(rw http.ResponseWriter, r *http.Request, ev Enliven, ctx *Context)) *mux.Route {
+	ev.routeHandlers[path] = RouteHandlerFunc(rhf)
 	return ev.GetRouter().HandleFunc(path, func(http.ResponseWriter, *http.Request) {})
 }
 
@@ -380,7 +387,7 @@ func routeHandlerFunc(rw http.ResponseWriter, r *http.Request, ev Enliven, ctx *
 // Run executes the Enliven http server
 func (ev *Enliven) Run(port string) {
 	// Adding our route handler as the last piece of middleware
-	ev.AddMiddlewareHandler(HandlerFunc(routeHandlerFunc))
+	ev.AddMiddlewareFunc(routeHandlerFunc)
 
 	fmt.Println("Server is listening on port " + port + ".")
 	http.ListenAndServe(":"+port, ContextHandler(ev.middleware))

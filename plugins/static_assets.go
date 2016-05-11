@@ -6,22 +6,29 @@ import (
 	"github.com/hickeroar/enliven"
 )
 
-// NewStaticAssetPlugin Creates a new static asset plugin instance
-func NewStaticAssetPlugin(route string, path string) *StaticAssetPlugin {
-	return &StaticAssetPlugin{
-		route: route,
-		path:  path,
+// NewStaticAssetsPlugin Creates a new static asset plugin instance
+func NewStaticAssetsPlugin(suppliedConfig map[string]string) *StaticAssetsPlugin {
+	var config = map[string]string{
+		"static.assets.route": "/static/",
+		"static.assets.path":  "./static/",
+	}
+
+	config = enliven.MergeConfig(config, suppliedConfig)
+
+	return &StaticAssetsPlugin{
+		route: config["static.assets.route"],
+		path:  config["static.assets.path"],
 	}
 }
 
-// StaticAssetPlugin handles adding a route handler for static assets
-type StaticAssetPlugin struct {
+// StaticAssetsPlugin handles adding a route handler for static assets
+type StaticAssetsPlugin struct {
 	path  string
 	route string
 }
 
 // Initialize sets up our plugin to ahndle static asset requests
-func (sap *StaticAssetPlugin) Initialize(ev *enliven.Enliven) {
+func (sap *StaticAssetsPlugin) Initialize(ev *enliven.Enliven) {
 	router := ev.GetRouter()
 	handler := http.StripPrefix(sap.route, http.FileServer(http.Dir(sap.path)))
 	router.PathPrefix(sap.route).Handler(handler)

@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"math/rand"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/hickeroar/enliven"
@@ -71,12 +72,22 @@ func (rs *redisSession) SessionID() string {
 }
 
 // NewRedisSessionMiddleware generates an instance of RedisSessionMiddleware
-func NewRedisSessionMiddleware(address string, password string) *RedisSessionMiddleware {
+func NewRedisSessionMiddleware(suppliedConfig map[string]string) *RedisSessionMiddleware {
+	var config = map[string]string{
+		"session.redis.address":  "127.0.0.1:6379",
+		"session.redis.password": "",
+		"session.redis.database": "0",
+	}
+
+	config = enliven.MergeConfig(config, suppliedConfig)
+
+	database, _ := strconv.Atoi(config["session.redis.database"])
+
 	return &RedisSessionMiddleware{
 		redisClient: redis.NewClient(&redis.Options{
-			Addr:     address,
-			Password: password,
-			DB:       0,
+			Addr:     config["session.redis.address"],
+			Password: config["session.redis.password"],
+			DB:       int64(database),
 		}),
 	}
 }
