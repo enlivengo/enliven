@@ -73,8 +73,8 @@ func (rs *redisSession) SessionID() string {
 }
 
 // NewRedisSessionMiddleware generates an instance of RedisSessionMiddleware
-func NewRedisSessionMiddleware(suppliedConfig map[string]string) *RedisSessionMiddleware {
-	var config = map[string]string{
+func NewRedisSessionMiddleware(suppliedConfig enliven.Config) *RedisSessionMiddleware {
+	var config = enliven.Config{
 		"session.redis.address":  "127.0.0.1:6379",
 		"session.redis.password": "",
 		"session.redis.database": "0",
@@ -105,8 +105,8 @@ func (rsm *RedisSessionMiddleware) generateSessionID() string {
 	return base64.URLEncoding.EncodeToString(rb)
 }
 
-func (rsm *RedisSessionMiddleware) ServeHTTP(rw http.ResponseWriter, r *http.Request, ev enliven.Enliven, ctx *enliven.Context, next enliven.NextHandlerFunc) {
-	sessionID, err := r.Cookie("enlivenSession")
+func (rsm *RedisSessionMiddleware) ServeHTTP(ctx *enliven.Context, next enliven.NextHandlerFunc) {
+	sessionID, err := ctx.Request.Cookie("enlivenSession")
 	var existing bool
 	var sID string
 	// If there was no cookie, we create a session id, a session in redis, and a cookie to hold the ID.
@@ -117,10 +117,10 @@ func (rsm *RedisSessionMiddleware) ServeHTTP(rw http.ResponseWriter, r *http.Req
 		existing = false
 		sID, _ = randutil.AlphaString(32)
 		cookie := http.Cookie{Name: "enlivenSession", Value: sID}
-		http.SetCookie(rw, &cookie)
+		http.SetCookie(ctx.Response, &cookie)
 	}
 
 	ctx.Session = newRedisSession(sID, rsm.redisClient, existing)
 
-	next(rw, r, ev, ctx)
+	next(ctx)
 }

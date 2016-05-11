@@ -22,8 +22,11 @@ var enliven Enliven
 
 // --------------------------------------------------
 
+// Config represents string kvps of application configuration
+type Config map[string]string
+
 // MergeConfig takes a default config and merges a supplied one into it.
-func MergeConfig(defaultConfig map[string]string, suppliedConfig map[string]string) map[string]string {
+func MergeConfig(defaultConfig Config, suppliedConfig Config) Config {
 	for key, value := range suppliedConfig {
 		defaultConfig[key] = value
 	}
@@ -51,26 +54,40 @@ type ISession interface {
 // IMiddlewareHandler is an interface to be used when writing Middleware
 // Copied w/ alterations from github.com/codegangsta/negroni
 type IMiddlewareHandler interface {
-	ServeHTTP(rw http.ResponseWriter, r *http.Request, ev Enliven, ctx *Context, next NextHandlerFunc)
+	ServeHTTP(*Context, NextHandlerFunc)
+}
+
+// --------------------------------------------------
+
+// Context stores context variables and the session that will be passed to requests
+type Context struct {
+	Session  ISession
+	Items    map[string]string
+	Enliven  Enliven
+	Response http.ResponseWriter
+	Request  *http.Request
 }
 
 // --------------------------------------------------
 
 // CHandler Handles injecting the initial request context before passing handling on to the Middleware struct
-type CHandler func(rw http.ResponseWriter, r *http.Request, ev Enliven, ctx *Context)
+type CHandler func(*Context)
 
 // ServeHTTP is the first handler that gets hit when a request comes in.
 func (ch CHandler) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	ctx := &Context{
-		Items: make(map[string]string),
+		Items:    make(map[string]string),
+		Enliven:  enliven,
+		Response: rw,
+		Request:  r,
 	}
-	ch(rw, r, enliven, ctx)
+	ch(ctx)
 }
 
 // ContextHandler sets up serving the first request, and the handing off of subsequent requests to the Middleware struct
 func ContextHandler(h Middleware) CHandler {
-	return CHandler(func(rw http.ResponseWriter, r *http.Request, ev Enliven, ctx *Context) {
-		h.handler.ServeHTTP(rw, r, enliven, ctx, h.next.ServeHTTP)
+	return CHandler(func(ctx *Context) {
+		h.handler.ServeHTTP(ctx, h.next.ServeHTTP)
 	})
 }
 
@@ -78,36 +95,28 @@ func ContextHandler(h Middleware) CHandler {
 
 // NextHandlerFunc allow use of ordinary functions middleware handlers
 // Copied w/ alterations from github.com/codegangsta/negroni
-type NextHandlerFunc func(rw http.ResponseWriter, r *http.Request, ev Enliven, ctx *Context)
+type NextHandlerFunc func(*Context)
 
 // Copied w/ alterations from github.com/codegangsta/negroni
-func (nh NextHandlerFunc) ServeHTTP(rw http.ResponseWriter, r *http.Request, ev Enliven, ctx *Context) {
-	nh(rw, r, ev, ctx)
+func (nh NextHandlerFunc) ServeHTTP(ctx *Context) {
+	nh(ctx)
 }
 
 // --------------------------------------------------
 
 // HandlerFunc allow use of ordinary functions middleware handlers
 // Copied w/ alterations from github.com/codegangsta/negroni
-type HandlerFunc func(rw http.ResponseWriter, r *http.Request, ev Enliven, ctx *Context, next NextHandlerFunc)
+type HandlerFunc func(*Context, NextHandlerFunc)
 
 // Copied w/ alterations from github.com/codegangsta/negroni
-func (h HandlerFunc) ServeHTTP(rw http.ResponseWriter, r *http.Request, ev Enliven, ctx *Context, next NextHandlerFunc) {
-	h(rw, r, ev, ctx, next)
+func (h HandlerFunc) ServeHTTP(ctx *Context, next NextHandlerFunc) {
+	h(ctx, next)
 }
 
 // --------------------------------------------------
 
 // RouteHandlerFunc is an interface to be used when writing route handler functions
-type RouteHandlerFunc func(rw http.ResponseWriter, r *http.Request, ev Enliven, ctx *Context)
-
-// --------------------------------------------------
-
-// Context stores context variables and the session that will be passed to requests
-type Context struct {
-	Session ISession
-	Items   map[string]string
-}
+type RouteHandlerFunc func(*Context)
 
 // --------------------------------------------------
 
@@ -119,8 +128,8 @@ type Middleware struct {
 }
 
 // Copied w/ alterations from github.com/codegangsta/negroni
-func (m Middleware) ServeHTTP(rw http.ResponseWriter, r *http.Request, ev Enliven, ctx *Context) {
-	m.handler.ServeHTTP(rw, r, ev, ctx, m.next.ServeHTTP)
+func (m Middleware) ServeHTTP(ctx *Context) {
+	m.handler.ServeHTTP(ctx, m.next.ServeHTTP)
 }
 
 // --------------------------------------------------
@@ -134,7 +143,7 @@ type Enliven struct {
 }
 
 // New (constructor) gets a new instance of enliven.
-func New(config map[string]string) *Enliven {
+func New(config Config) *Enliven {
 	enliven = Enliven{
 		services:      make(map[string]interface{}),
 		routeHandlers: make(map[string]RouteHandlerFunc),
@@ -148,8 +157,8 @@ func New(config map[string]string) *Enliven {
 }
 
 // addConfig created and registers the app config
-func (ev *Enliven) registerConfig(suppliedConfig map[string]string) {
-	var enlivenConfig = map[string]string{
+func (ev *Enliven) registerConfig(suppliedConfig Config) {
+	var enlivenConfig = Config{
 		"db.driver":     "",
 		"db.host":       "",
 		"db.user":       "",
@@ -277,8 +286,8 @@ func (ev *Enliven) GetDatabase() *gorm.DB {
 }
 
 // GetConfig Gets an instance of the config
-func (ev *Enliven) GetConfig() map[string]string {
-	config := ev.GetService("config").(map[string]string)
+func (ev *Enliven) GetConfig() Config {
+	config := ev.GetService("config").(Config)
 	return config
 }
 
@@ -297,7 +306,7 @@ func (ev *Enliven) AddMiddleware(handler IMiddlewareHandler) {
 
 // AddMiddlewareFunc adds a HandlerFunc onto the middleware stack.
 // Copied w/ alterations from github.com/codegangsta/negroni
-func (ev *Enliven) AddMiddlewareFunc(handlerFunc func(rw http.ResponseWriter, r *http.Request, ev Enliven, ctx *Context, next NextHandlerFunc)) {
+func (ev *Enliven) AddMiddlewareFunc(handlerFunc func(*Context, NextHandlerFunc)) {
 	ev.AddMiddleware(HandlerFunc(handlerFunc))
 }
 
@@ -306,7 +315,7 @@ func (ev *Enliven) buildMiddleware(handlers []IMiddlewareHandler) Middleware {
 	var next Middleware
 
 	voidMiddleware := Middleware{
-		HandlerFunc(func(rw http.ResponseWriter, r *http.Request, ev Enliven, ctx *Context, next NextHandlerFunc) {}), &Middleware{},
+		HandlerFunc(func(*Context, NextHandlerFunc) {}), &Middleware{},
 	}
 
 	if len(handlers) == 0 {
@@ -323,7 +332,7 @@ func (ev *Enliven) buildMiddleware(handlers []IMiddlewareHandler) Middleware {
 // AddRoute Registers a handler for a given route.
 // We register a dummy route with mux, and then store the provided handler
 // which we'll use later in order to inject dependencies into the handler func.
-func (ev *Enliven) AddRoute(path string, rhf func(rw http.ResponseWriter, r *http.Request, ev Enliven, ctx *Context)) *mux.Route {
+func (ev *Enliven) AddRoute(path string, rhf func(*Context)) *mux.Route {
 	ev.routeHandlers[path] = RouteHandlerFunc(rhf)
 	return ev.GetRouter().HandleFunc(path, func(http.ResponseWriter, *http.Request) {})
 }
@@ -345,43 +354,43 @@ func cleanPath(p string) string {
 
 // Copied w/ many alterations from github.com/gorilla/mux
 // Hijacks the abilities of mux to add our DI handling to route handlers
-func routeHandlerFunc(rw http.ResponseWriter, r *http.Request, ev Enliven, ctx *Context, next NextHandlerFunc) {
+func routeHandlerFunc(ctx *Context, next NextHandlerFunc) {
 
 	// Clean path to canonical form and redirect.
-	if p := cleanPath(r.URL.Path); p != r.URL.Path {
-		url := *r.URL
+	if p := cleanPath(ctx.Request.URL.Path); p != ctx.Request.URL.Path {
+		url := *ctx.Request.URL
 		url.Path = p
 		p = url.String()
 
-		rw.Header().Set("Location", p)
-		rw.WriteHeader(http.StatusMovedPermanently)
+		ctx.Response.Header().Set("Location", p)
+		ctx.Response.WriteHeader(http.StatusMovedPermanently)
 		return
 	}
 
-	if !ev.GetRouter().KeepContext {
-		defer context.Clear(r)
+	if !ctx.Enliven.GetRouter().KeepContext {
+		defer context.Clear(ctx.Request)
 	}
 
 	var match mux.RouteMatch
 	var handler http.Handler
-	if enliven.GetRouter().Match(r, &match) {
+	if enliven.GetRouter().Match(ctx.Request, &match) {
 		handler = match.Handler
 	}
 	if handler == nil {
 		handler := http.NotFoundHandler()
-		handler.ServeHTTP(rw, r)
+		handler.ServeHTTP(ctx.Response, ctx.Request)
 	} else {
 		// We use the request path to look up our stored route handler if it exists
-		if routeHandler, ok := ev.routeHandlers[r.URL.Path]; ok {
+		if routeHandler, ok := ctx.Enliven.routeHandlers[ctx.Request.URL.Path]; ok {
 			// Calling the route handler with Enliven passed in.
-			routeHandler(rw, r, ev, ctx)
+			routeHandler(ctx)
 		} else {
 			// Using handler request handling otherwise.
-			handler.ServeHTTP(rw, r)
+			handler.ServeHTTP(ctx.Response, ctx.Request)
 		}
 	}
 
-	next(rw, r, ev, ctx)
+	next(ctx)
 }
 
 // Run executes the Enliven http server

@@ -7,8 +7,8 @@ import (
 )
 
 // NewStaticAssetsPlugin Creates a new static asset plugin instance
-func NewStaticAssetsPlugin(suppliedConfig map[string]string) *StaticAssetsPlugin {
-	var config = map[string]string{
+func NewStaticAssetsPlugin(suppliedConfig enliven.Config) *StaticAssetsPlugin {
+	var config = enliven.Config{
 		"static.assets.route": "/static/",
 		"static.assets.path":  "./static/",
 	}

@@ -8,8 +8,8 @@ import (
 )
 
 // NewStatikAssetsPlugin Creates a new embedded statik asset plugin
-func NewStatikAssetsPlugin(suppliedConfig map[string]string) *StatikAssetsPlugin {
-	var config = map[string]string{
+func NewStatikAssetsPlugin(suppliedConfig enliven.Config) *StatikAssetsPlugin {
+	var config = enliven.Config{
 		"statik.assets.route": "/statik/",
 	}
 

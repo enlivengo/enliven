@@ -90,8 +90,8 @@ func (fs *fileSession) Path() string {
 }
 
 // NewFileSessionMiddleware generates an instance of FileSessionMiddleware
-func NewFileSessionMiddleware(suppliedConfig map[string]string) *FileSessionMiddleware {
-	var config = map[string]string{
+func NewFileSessionMiddleware(suppliedConfig enliven.Config) *FileSessionMiddleware {
+	var config = enliven.Config{
 		"session.file.path":     "/tmp/",
 		"session.file.ttl":      "86400",
 		"session.file.purgettl": "1800",
@@ -126,8 +126,8 @@ type FileSessionMiddleware struct {
 	purging   bool
 }
 
-func (fsm *FileSessionMiddleware) ServeHTTP(rw http.ResponseWriter, r *http.Request, ev enliven.Enliven, ctx *enliven.Context, next enliven.NextHandlerFunc) {
-	sessionID, err := r.Cookie("enlivenSession")
+func (fsm *FileSessionMiddleware) ServeHTTP(ctx *enliven.Context, next enliven.NextHandlerFunc) {
+	sessionID, err := ctx.Request.Cookie("enlivenSession")
 	var sID string
 	// If there was no cookie, we create a session id
 	if err == nil {
@@ -135,7 +135,7 @@ func (fsm *FileSessionMiddleware) ServeHTTP(rw http.ResponseWriter, r *http.Requ
 	} else {
 		sID, _ = randutil.AlphaString(32)
 		cookie := http.Cookie{Name: "enlivenSession", Value: sID}
-		http.SetCookie(rw, &cookie)
+		http.SetCookie(ctx.Response, &cookie)
 	}
 
 	session := newFileSession(sID, fsm.path)
@@ -143,7 +143,7 @@ func (fsm *FileSessionMiddleware) ServeHTTP(rw http.ResponseWriter, r *http.Requ
 
 	fsm.purgeSessions()
 
-	next(rw, r, ev, ctx)
+	next(ctx)
 }
 
 func (fsm *FileSessionMiddleware) purgeSessions() {

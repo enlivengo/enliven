@@ -75,10 +75,10 @@ func (ms *memorySession) SessionID() string {
 }
 
 // NewMemorySessionMiddleware generates an instance of MemorySessionMiddleware
-func NewMemorySessionMiddleware(suppliedConfig map[string]string) *MemorySessionMiddleware {
+func NewMemorySessionMiddleware(suppliedConfig enliven.Config) *MemorySessionMiddleware {
 	sessions = make(map[string]*StoredSession)
 
-	var config = map[string]string{
+	var config = enliven.Config{
 		"session.memory.ttl":      "86400",
 		"session.memory.purgettl": "1800",
 	}
@@ -104,8 +104,8 @@ type MemorySessionMiddleware struct {
 	purging   bool
 }
 
-func (msm *MemorySessionMiddleware) ServeHTTP(rw http.ResponseWriter, r *http.Request, ev enliven.Enliven, ctx *enliven.Context, next enliven.NextHandlerFunc) {
-	sessionID, err := r.Cookie("enlivenSession")
+func (msm *MemorySessionMiddleware) ServeHTTP(ctx *enliven.Context, next enliven.NextHandlerFunc) {
+	sessionID, err := ctx.Request.Cookie("enlivenSession")
 	var sID string
 	// If there was no cookie, we create a session id
 	if err == nil {
@@ -113,14 +113,14 @@ func (msm *MemorySessionMiddleware) ServeHTTP(rw http.ResponseWriter, r *http.Re
 	} else {
 		sID, _ = randutil.AlphaString(32)
 		cookie := http.Cookie{Name: "enlivenSession", Value: sID}
-		http.SetCookie(rw, &cookie)
+		http.SetCookie(ctx.Response, &cookie)
 	}
 
 	ctx.Session = newMemorySession(sID)
 
 	msm.purgeSessions()
 
-	next(rw, r, ev, ctx)
+	next(ctx)
 }
 
 func (msm *MemorySessionMiddleware) purgeSessions() {
