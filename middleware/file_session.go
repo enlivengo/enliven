@@ -59,17 +59,18 @@ func (fs *fileSession) Set(key string, value string) error {
 // Get returns a session variable or empty string
 func (fs *fileSession) Get(key string) string {
 	sessionData := fs.getSessionData()
-	return sessionData[key]
+	if val, ok := sessionData[key]; ok {
+		return val
+	}
+	return ""
 }
 
 // Delete removes a session variable
 func (fs *fileSession) Delete(key string) error {
 	sessionData := fs.getSessionData()
-
 	if _, ok := sessionData[key]; ok {
 		delete(sessionData, key)
 	}
-
 	return nil
 }
 
@@ -181,7 +182,6 @@ func (fsm *FileSessionMiddleware) purgeSessions() {
 		}
 
 		fsm.lastPurge = current
-
 		fsm.purging = false
 	}
 }
