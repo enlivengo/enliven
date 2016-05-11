@@ -68,6 +68,12 @@ type Context struct {
 	Request  *http.Request
 }
 
+// String sets up string headers and outputs a string response
+func (ctx *Context) String(output string) {
+	ctx.Response.Header().Set("Content-Type", "text/plain")
+	ctx.Response.Write([]byte(output))
+}
+
 // --------------------------------------------------
 
 // CHandler Handles injecting the initial request context before passing handling on to the Middleware struct
