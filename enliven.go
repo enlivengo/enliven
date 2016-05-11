@@ -74,6 +74,19 @@ func (ctx *Context) String(output string) {
 	ctx.Response.Write([]byte(output))
 }
 
+// HTML sets up HTML headers and outputs an HTML response
+func (ctx *Context) HTML(output string) {
+	ctx.Response.Header().Set("Content-Type", "text/html")
+	ctx.Response.Write([]byte(output))
+}
+
+// JSON sets up JSON headers and outputs a JSON response
+// Expects to recieve the result of json marshalling ([]byte)
+func (ctx *Context) JSON(output []byte) {
+	ctx.Response.Header().Set("Content-Type", "application/json")
+	ctx.Response.Write(output)
+}
+
 // --------------------------------------------------
 
 // CHandler Handles injecting the initial request context before passing handling on to the Middleware struct
