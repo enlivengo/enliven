@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/hickeroar/enliven"
+	"github.com/jmcvetta/randutil"
 	"gopkg.in/redis.v3"
 )
 
@@ -18,7 +19,7 @@ func newRedisSession(sessID string, rClient *redis.Client, existing bool) *redis
 		sessionID:   sessID,
 	}
 
-	rSess.Bump(existing)
+	rSess.bump(existing)
 
 	return rSess
 }
@@ -29,9 +30,9 @@ type redisSession struct {
 	sessionID   string
 }
 
-// Bump resets the current session's expiration date to 24 hours in the future
+// Resets the current session's expiration date to 24 hours in the future
 // and sets the init time if this is a new session
-func (rs *redisSession) Bump(existing bool) {
+func (rs *redisSession) bump(existing bool) {
 	if !existing {
 		rs.Set("init", time.Now().String())
 	}
@@ -114,7 +115,7 @@ func (rsm *RedisSessionMiddleware) ServeHTTP(rw http.ResponseWriter, r *http.Req
 		sID = sessionID.Value
 	} else {
 		existing = false
-		sID = rsm.generateSessionID()
+		sID, _ = randutil.AlphaString(32)
 		cookie := http.Cookie{Name: "enlivenSession", Value: sID}
 		http.SetCookie(rw, &cookie)
 	}
