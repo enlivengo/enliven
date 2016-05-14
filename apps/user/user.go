@@ -16,8 +16,8 @@ type User struct {
 	Password    string
 }
 
-// NewPlugin generates and returns an instance of the Plugin
-func NewPlugin(suppliedConfig enliven.Config) *Plugin {
+// NewApp generates and returns an instance of the app
+func NewApp(suppliedConfig enliven.Config) *App {
 	var config = enliven.Config{
 		"user.login.route":    "/user/login",
 		"user.logout.route":   "/user/logout",
@@ -26,39 +26,39 @@ func NewPlugin(suppliedConfig enliven.Config) *Plugin {
 
 	config = enliven.MergeConfig(config, suppliedConfig)
 
-	return &Plugin{
+	return &App{
 		loginRoute:    config["user.login.route"],
 		logoutRoute:   config["user.logout.route"],
 		registerRoute: config["user.register.route"],
 	}
 }
 
-// Plugin handles adding a route handler for static assets
-type Plugin struct {
+// App handles adding a route handler for static assets
+type App struct {
 	loginRoute    string
 	logoutRoute   string
 	registerRoute string
 }
 
-// Initialize sets up our plugin to handle embedded static asset requests
-func (sap *Plugin) Initialize(ev *enliven.Enliven) {
+// Initialize sets up our app to handle embedded static asset requests
+func (sap *App) Initialize(ev *enliven.Enliven) {
 	ev.GetDatabase().AutoMigrate(&User{})
 
 	ev.AddMiddlewareFunc(SessionMiddleware)
 }
 
-// GetName returns the plugin's name
-func (sap *Plugin) GetName() string {
+// GetName returns the app's name
+func (sap *App) GetName() string {
 	return "user"
 }
 
 // SessionMiddleware handles adding the elements to the context that carry the user's id and status
 func SessionMiddleware(ctx *enliven.Context, next enliven.NextHandlerFunc) {
 	if ctx.Session == nil {
-		panic("The User plugin requires Session middleware to be registered.")
+		panic("The User app requires Session middleware to be registered.")
 	}
 
-	userID := ctx.Session.Get("Plugin_LoggedInUserID")
+	userID := ctx.Session.Get("UserApp_LoggedInUserID")
 
 	// If there isn't a user id in the session, we set context items accordingly
 	if userID == "" {

@@ -36,9 +36,9 @@ func MergeConfig(defaultConfig Config, suppliedConfig Config) Config {
 
 // --------------------------------------------------
 
-// IPlugin is an interface for writing Enliven plugins
-// Plugins are basically packaged enliven setup code
-type IPlugin interface {
+// IApp is an interface for writing Enliven apps
+// Apps are basically packaged code to extend Enliven's functionality
+type IApp interface {
 	Initialize(ev *Enliven)
 	GetName() string
 }
@@ -161,7 +161,7 @@ type Enliven struct {
 	routeHandlers map[string]RouteHandlerFunc
 	middleware    Middleware
 	handlers      []IMiddlewareHandler
-	plugins       []string
+	apps          []string
 }
 
 // New (constructor) gets a new instance of enliven.
@@ -294,19 +294,19 @@ func (ev *Enliven) GetService(name string) interface{} {
 	return nil
 }
 
-// InitPlugin initializes a provided plugin
-func (ev *Enliven) InitPlugin(plugin IPlugin) {
-	if ev.PluginRegistered(plugin.GetName()) {
-		panic("The '" + plugin.GetName() + "' plugin has already been registered.")
+// AddApp initializes a provided enliven application
+func (ev *Enliven) AddApp(app IApp) {
+	if ev.AppInstalled(app.GetName()) {
+		panic("The '" + app.GetName() + "' app has already been added.")
 	}
 
-	plugin.Initialize(ev)
-	ev.plugins = append(ev.plugins, plugin.GetName())
+	app.Initialize(ev)
+	ev.apps = append(ev.apps, app.GetName())
 }
 
-// PluginRegistered returns true if a plugin has been registered
-func (ev *Enliven) PluginRegistered(name string) bool {
-	for _, value := range ev.plugins {
+// AppInstalled returns true if a given app has already been installed
+func (ev *Enliven) AppInstalled(name string) bool {
+	for _, value := range ev.apps {
 		if name == value {
 			return true
 		}
