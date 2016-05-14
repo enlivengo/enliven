@@ -1,4 +1,4 @@
-package auth
+package user
 
 import (
 	"strconv"
@@ -16,8 +16,8 @@ type User struct {
 	Password    string
 }
 
-// NewUserPlugin generates and returns an instance of the UserPlugin
-func NewUserPlugin(suppliedConfig enliven.Config) *UserPlugin {
+// NewPlugin generates and returns an instance of the Plugin
+func NewPlugin(suppliedConfig enliven.Config) *Plugin {
 	var config = enliven.Config{
 		"user.login.route":  "/user/login",
 		"user.logout.route": "/user/logout",
@@ -25,37 +25,37 @@ func NewUserPlugin(suppliedConfig enliven.Config) *UserPlugin {
 
 	config = enliven.MergeConfig(config, suppliedConfig)
 
-	return &UserPlugin{
+	return &Plugin{
 		loginRoute:  config["user.login.route"],
 		logoutRoute: config["user.logout.route"],
 	}
 }
 
-// UserPlugin handles adding a route handler for static assets
-type UserPlugin struct {
+// Plugin handles adding a route handler for static assets
+type Plugin struct {
 	loginRoute  string
 	logoutRoute string
 }
 
 // Initialize sets up our plugin to handle embedded static asset requests
-func (sap *UserPlugin) Initialize(ev *enliven.Enliven) {
+func (sap *Plugin) Initialize(ev *enliven.Enliven) {
 	ev.GetDatabase().AutoMigrate(&User{})
 
-	ev.AddMiddlewareFunc(UserSessionMiddleware)
+	ev.AddMiddlewareFunc(SessionMiddleware)
 }
 
 // GetName returns the plugin's name
-func (sap *UserPlugin) GetName() string {
+func (sap *Plugin) GetName() string {
 	return "user"
 }
 
-// UserSessionMiddleware handles adding the elements to the context that carry the user's id and status
-func UserSessionMiddleware(ctx *enliven.Context, next enliven.NextHandlerFunc) {
+// SessionMiddleware handles adding the elements to the context that carry the user's id and status
+func SessionMiddleware(ctx *enliven.Context, next enliven.NextHandlerFunc) {
 	if ctx.Session == nil {
 		panic("The User plugin requires Session middleware to be registered.")
 	}
 
-	userID := ctx.Session.Get("UserPlugin_LoggedInUserID")
+	userID := ctx.Session.Get("Plugin_LoggedInUserID")
 
 	// If there isn't a user id in the session, we set context items accordingly
 	if userID == "" {
