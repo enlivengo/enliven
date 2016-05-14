@@ -19,22 +19,25 @@ type User struct {
 // NewPlugin generates and returns an instance of the Plugin
 func NewPlugin(suppliedConfig enliven.Config) *Plugin {
 	var config = enliven.Config{
-		"user.login.route":  "/user/login",
-		"user.logout.route": "/user/logout",
+		"user.login.route":    "/user/login",
+		"user.logout.route":   "/user/logout",
+		"user.register.route": "/user/register",
 	}
 
 	config = enliven.MergeConfig(config, suppliedConfig)
 
 	return &Plugin{
-		loginRoute:  config["user.login.route"],
-		logoutRoute: config["user.logout.route"],
+		loginRoute:    config["user.login.route"],
+		logoutRoute:   config["user.logout.route"],
+		registerRoute: config["user.register.route"],
 	}
 }
 
 // Plugin handles adding a route handler for static assets
 type Plugin struct {
-	loginRoute  string
-	logoutRoute string
+	loginRoute    string
+	logoutRoute   string
+	registerRoute string
 }
 
 // Initialize sets up our plugin to handle embedded static asset requests
