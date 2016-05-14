@@ -40,6 +40,7 @@ func MergeConfig(defaultConfig Config, suppliedConfig Config) Config {
 // Plugins are basically packaged enliven setup code
 type IPlugin interface {
 	Initialize(ev *Enliven)
+	GetName() string
 }
 
 // ISession represents a session that session middleware must implement
@@ -63,6 +64,7 @@ type IMiddlewareHandler interface {
 type Context struct {
 	Session  ISession
 	Items    map[string]string
+	Storage  map[string]interface{}
 	Enliven  Enliven
 	Response http.ResponseWriter
 	Request  *http.Request
@@ -159,6 +161,7 @@ type Enliven struct {
 	routeHandlers map[string]RouteHandlerFunc
 	middleware    Middleware
 	handlers      []IMiddlewareHandler
+	plugins       []string
 }
 
 // New (constructor) gets a new instance of enliven.
@@ -293,7 +296,23 @@ func (ev *Enliven) GetService(name string) interface{} {
 
 // InitPlugin initializes a provided plugin
 func (ev *Enliven) InitPlugin(plugin IPlugin) {
+	if ev.PluginRegistered(plugin.GetName()) {
+		panic("The '" + plugin.GetName() + "' plugin has already been registered.")
+	}
+
 	plugin.Initialize(ev)
+	ev.plugins = append(ev.plugins, plugin.GetName())
+}
+
+// PluginRegistered returns true if a plugin has been registered
+func (ev *Enliven) PluginRegistered(name string) bool {
+	for _, value := range ev.plugins {
+		if name == value {
+			return true
+		}
+	}
+
+	return false
 }
 
 // GetDatabase Gets an instance of the database

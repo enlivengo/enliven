@@ -1,4 +1,4 @@
-package middleware
+package session
 
 import (
 	"encoding/json"
@@ -89,8 +89,8 @@ func (fs *fileSession) Path() string {
 	return fs.path
 }
 
-// NewFileSessionMiddleware generates an instance of FileSessionMiddleware
-func NewFileSessionMiddleware(suppliedConfig enliven.Config) *FileSessionMiddleware {
+// NewFileStorageMiddleware generates an instance of FileStorageMiddleware
+func NewFileStorageMiddleware(suppliedConfig enliven.Config) *FileStorageMiddleware {
 	var config = enliven.Config{
 		"session.file.path":     "/tmp/",
 		"session.file.ttl":      "86400",
@@ -108,7 +108,7 @@ func NewFileSessionMiddleware(suppliedConfig enliven.Config) *FileSessionMiddlew
 	purgeGap, _ := strconv.Atoi(config["session.file.purgettl"])
 	sessionTTL, _ := strconv.Atoi(config["session.file.ttl"])
 
-	return &FileSessionMiddleware{
+	return &FileStorageMiddleware{
 		path:      dir,
 		lastPurge: int32(time.Now().Unix()),
 		purgeTTL:  int32(purgeGap),
@@ -117,8 +117,8 @@ func NewFileSessionMiddleware(suppliedConfig enliven.Config) *FileSessionMiddlew
 	}
 }
 
-// FileSessionMiddleware manages sessions, using the filesystem as the session storage mechanism
-type FileSessionMiddleware struct {
+// FileStorageMiddleware manages sessions, using the filesystem as the session storage mechanism
+type FileStorageMiddleware struct {
 	path      string
 	lastPurge int32
 	purgeTTL  int32
@@ -126,7 +126,7 @@ type FileSessionMiddleware struct {
 	purging   bool
 }
 
-func (fsm *FileSessionMiddleware) ServeHTTP(ctx *enliven.Context, next enliven.NextHandlerFunc) {
+func (fsm *FileStorageMiddleware) ServeHTTP(ctx *enliven.Context, next enliven.NextHandlerFunc) {
 	sessionID, err := ctx.Request.Cookie("enlivenSession")
 	var sID string
 	// If there was no cookie, we create a session id
@@ -146,7 +146,7 @@ func (fsm *FileSessionMiddleware) ServeHTTP(ctx *enliven.Context, next enliven.N
 	next(ctx)
 }
 
-func (fsm *FileSessionMiddleware) purgeSessions() {
+func (fsm *FileStorageMiddleware) purgeSessions() {
 	// Returning if we're already in the process of purging
 	if fsm.purging {
 		return

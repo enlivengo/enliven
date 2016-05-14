@@ -1,4 +1,4 @@
-package middleware
+package session
 
 import (
 	"encoding/base64"
@@ -72,8 +72,8 @@ func (rs *redisSession) SessionID() string {
 	return rs.sessionID
 }
 
-// NewRedisSessionMiddleware generates an instance of RedisSessionMiddleware
-func NewRedisSessionMiddleware(suppliedConfig enliven.Config) *RedisSessionMiddleware {
+// NewRedisStorageMiddleware generates an instance of RedisStorageMiddleware
+func NewRedisStorageMiddleware(suppliedConfig enliven.Config) *RedisStorageMiddleware {
 	var config = enliven.Config{
 		"session.redis.address":  "127.0.0.1:6379",
 		"session.redis.password": "",
@@ -84,7 +84,7 @@ func NewRedisSessionMiddleware(suppliedConfig enliven.Config) *RedisSessionMiddl
 
 	database, _ := strconv.Atoi(config["session.redis.database"])
 
-	return &RedisSessionMiddleware{
+	return &RedisStorageMiddleware{
 		redisClient: redis.NewClient(&redis.Options{
 			Addr:     config["session.redis.address"],
 			Password: config["session.redis.password"],
@@ -93,19 +93,19 @@ func NewRedisSessionMiddleware(suppliedConfig enliven.Config) *RedisSessionMiddl
 	}
 }
 
-// RedisSessionMiddleware manages sessions, using redis as the session storage mechanism
-type RedisSessionMiddleware struct {
+// RedisStorageMiddleware manages sessions, using redis as the session storage mechanism
+type RedisStorageMiddleware struct {
 	redisClient *redis.Client
 }
 
 // generateSessionID produces a unique session id that we can store on the user's end as a cookie.
-func (rsm *RedisSessionMiddleware) generateSessionID() string {
+func (rsm *RedisStorageMiddleware) generateSessionID() string {
 	rb := make([]byte, 32)
 	rand.Read(rb)
 	return base64.URLEncoding.EncodeToString(rb)
 }
 
-func (rsm *RedisSessionMiddleware) ServeHTTP(ctx *enliven.Context, next enliven.NextHandlerFunc) {
+func (rsm *RedisStorageMiddleware) ServeHTTP(ctx *enliven.Context, next enliven.NextHandlerFunc) {
 	sessionID, err := ctx.Request.Cookie("enlivenSession")
 	var existing bool
 	var sID string

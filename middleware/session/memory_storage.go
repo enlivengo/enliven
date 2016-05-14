@@ -1,4 +1,4 @@
-package middleware
+package session
 
 import (
 	"net/http"
@@ -74,8 +74,8 @@ func (ms *memorySession) SessionID() string {
 	return ms.sessionID
 }
 
-// NewMemorySessionMiddleware generates an instance of MemorySessionMiddleware
-func NewMemorySessionMiddleware(suppliedConfig enliven.Config) *MemorySessionMiddleware {
+// NewMemoryStorageMiddleware generates an instance of MemoryStorageMiddleware
+func NewMemoryStorageMiddleware(suppliedConfig enliven.Config) *MemoryStorageMiddleware {
 	sessions = make(map[string]*StoredSession)
 
 	var config = enliven.Config{
@@ -88,7 +88,7 @@ func NewMemorySessionMiddleware(suppliedConfig enliven.Config) *MemorySessionMid
 	purgeGap, _ := strconv.Atoi(config["session.memory.purgettl"])
 	sessionTTL, _ := strconv.Atoi(config["session.memory.ttl"])
 
-	return &MemorySessionMiddleware{
+	return &MemoryStorageMiddleware{
 		lastPurge: int32(time.Now().Unix()),
 		purgeTTL:  int32(purgeGap),
 		ttl:       int32(sessionTTL),
@@ -96,15 +96,15 @@ func NewMemorySessionMiddleware(suppliedConfig enliven.Config) *MemorySessionMid
 	}
 }
 
-// MemorySessionMiddleware manages sessions, using memory as the session storage mechanism
-type MemorySessionMiddleware struct {
+// MemoryStorageMiddleware manages sessions, using memory as the session storage mechanism
+type MemoryStorageMiddleware struct {
 	lastPurge int32
 	purgeTTL  int32
 	ttl       int32
 	purging   bool
 }
 
-func (msm *MemorySessionMiddleware) ServeHTTP(ctx *enliven.Context, next enliven.NextHandlerFunc) {
+func (msm *MemoryStorageMiddleware) ServeHTTP(ctx *enliven.Context, next enliven.NextHandlerFunc) {
 	sessionID, err := ctx.Request.Cookie("enlivenSession")
 	var sID string
 	// If there was no cookie, we create a session id
@@ -123,7 +123,7 @@ func (msm *MemorySessionMiddleware) ServeHTTP(ctx *enliven.Context, next enliven
 	next(ctx)
 }
 
-func (msm *MemorySessionMiddleware) purgeSessions() {
+func (msm *MemoryStorageMiddleware) purgeSessions() {
 	// Returning if we're already in the process of purging
 	if msm.purging {
 		return
