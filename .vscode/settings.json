@@ -1,0 +1,31 @@
+{
+    "emeraldwalk.runonsave": {
+        "commands": [
+            {
+                "match": ".go",
+                "isAsync": false,
+                "cmd": "killall debug"
+            },
+            {
+                "match": ".go",
+                "isAsync": false,
+                "cmd": "cd ${workspaceRoot} && go get"
+            },
+            {
+                "match": ".html",
+                "isAsync": false,
+                "cmd": "killall debug"
+            },
+            {
+                "match": ".html",
+                "isAsync": false,
+                "cmd": "cd ${workspaceRoot} && rm -f ./apps/user/templates.go"
+            },
+            {
+                "match": ".html",
+                "isAsync": false,
+                "cmd": "cd ${workspaceRoot} && go generate ./..."
+            }
+        ]
+    }
+}

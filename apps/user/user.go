@@ -1,5 +1,7 @@
 package user
 
+//go:generate go-bindata -o templates.go -pkg user templates/...
+
 import (
 	"strconv"
 
@@ -11,9 +13,67 @@ import (
 type User struct {
 	gorm.Model
 
-	DisplayName string
-	Login       string `gorm:"type:varchar(100);unique_index"`
-	Password    string
+	DisplayName      string
+	Age              int
+	Login            string `gorm:"type:varchar(100);unique_index;"`
+	Email            string `gorm:"type:varchar(100);unique_index;"`
+	Password         string `gorm:"type:varchar(100);"`
+	VerificationCode string `gorm:"type:varchar(100);unique_index;"`
+	Group            Group  `gorm:"not null"`
+	Superuser        bool
+}
+
+// HasPermission checks if a user has a specific permission
+func (u *User) HasPermission(name string) bool {
+	if u.Superuser {
+		return true
+	}
+
+	var groupStack []string
+	return u.hasPermission(name, &u.Group, groupStack)
+}
+
+// hasPermission recursively looks through a group's inheritance chain to look for a permission
+func (u *User) hasPermission(name string, group *Group, groupStack []string) bool {
+	// Checking if this group has a permission matching the one we're looking for
+	for _, perm := range group.Permisions {
+		if name == perm.Name {
+			return true
+		}
+	}
+
+	// If this group inherits from another groups, we check that group for a permission
+	if group.Inherits != nil && group.Name != group.Inherits.Name {
+
+		// We're avoiding infinite group loops here by making sure we don't check a group more than once.
+		for _, stackGroup := range groupStack {
+			if stackGroup == group.Inherits.Name {
+				return false
+			}
+		}
+		groupStack = append(groupStack, group.Inherits.Name)
+
+		// Recursively checking the group's inheritance chain.
+		return u.hasPermission(name, group.Inherits, groupStack)
+	}
+
+	return false
+}
+
+// Group describes the user group database structure
+type Group struct {
+	gorm.Model
+
+	Name       string `gorm:"not null;unique;"`
+	Inherits   *Group
+	Permisions []Permission
+}
+
+// Permission describes a permission that can be linked to many groups
+type Permission struct {
+	gorm.Model
+
+	Name string `gorm:"not_null;unique;"`
 }
 
 // NewApp generates and returns an instance of the app
@@ -22,54 +82,39 @@ func NewApp() *App {
 }
 
 // App handles adding a route handler for static assets
-type App struct {
-	loginRoute    string
-	logoutRoute   string
-	registerRoute string
-}
+type App struct{}
 
 // Initialize sets up our app to handle embedded static asset requests
-func (sap *App) Initialize(ev *enliven.Enliven) {
+func (ua *App) Initialize(ev *enliven.Enliven) {
 	var config = enliven.Config{
-		"user.login.route":    "/user/login",
-		"user.logout.route":   "/user/logout",
-		"user.register.route": "/user/register",
+		"user.login.route":    "/user/login/",
+		"user.logout.route":   "/user/logout/",
+		"user.register.route": "/user/register/",
+		"user.verify.route":   "/user/verify/",
+		"user.password.route": "/user/password/",
+
+		"user.login.template":    "",
+		"user.logout.template":   "",
+		"user.register.template": "",
+		"user.verify.template":   "",
+		"user.password.template": "",
 	}
 
 	config = enliven.MergeConfig(config, ev.GetConfig())
 
-	sap.loginRoute = config["user.login.route"]
-	sap.logoutRoute = config["user.logout.route"]
-	sap.registerRoute = config["user.register.route"]
+	// Migrating the user tables
+	ev.GetDatabase().AutoMigrate(&User{}, &Group{}, &Permission{})
 
-	ev.GetDatabase().AutoMigrate(&User{})
+	// Routing setup
+	ev.AddRoute(config["user.login.route"], LoginGetHandler)
 
+	// Handles the setup of context variables to support user session management
 	ev.AddMiddlewareFunc(SessionMiddleware)
 }
 
 // GetName returns the app's name
-func (sap *App) GetName() string {
+func (ua *App) GetName() string {
 	return "user"
-}
-
-// SessionMiddleware handles adding the elements to the context that carry the user's id and status
-func SessionMiddleware(ctx *enliven.Context, next enliven.NextHandlerFunc) {
-	if ctx.Session == nil {
-		panic("The User app requires Session middleware to be registered.")
-	}
-
-	userID := ctx.Session.Get("UserApp_LoggedInUserID")
-
-	// If there isn't a user id in the session, we set context items accordingly
-	if userID == "" {
-		ctx.Items["UserLoggedIn"] = "0"
-		ctx.Items["UserID"] = "0"
-	} else {
-		ctx.Items["UserLoggedIn"] = "1"
-		ctx.Items["UserID"] = userID
-	}
-
-	next(ctx)
 }
 
 // GetUser returns an instance of the User model

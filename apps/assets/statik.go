@@ -13,12 +13,10 @@ func NewStatikApp() *StatikApp {
 }
 
 // StatikApp handles adding a route handler for static assets
-type StatikApp struct {
-	route string
-}
+type StatikApp struct{}
 
 // Initialize sets up our app to handle embedded static asset requests
-func (sap *StatikApp) Initialize(ev *enliven.Enliven) {
+func (sa *StatikApp) Initialize(ev *enliven.Enliven) {
 	var config = enliven.Config{
 		"assets.statik.route": "/statik/",
 	}
@@ -37,6 +35,6 @@ func (sap *StatikApp) Initialize(ev *enliven.Enliven) {
 }
 
 // GetName returns the apps's name
-func (sap *StatikApp) GetName() string {
+func (sa *StatikApp) GetName() string {
 	return "statik"
 }
