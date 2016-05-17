@@ -39,7 +39,7 @@ func MergeConfig(defaultConfig Config, suppliedConfig Config) Config {
 // IApp is an interface for writing Enliven apps
 // Apps are basically packaged code to extend Enliven's functionality
 type IApp interface {
-	Initialize(ev *Enliven)
+	Initialize(*Enliven)
 	GetName() string
 }
 

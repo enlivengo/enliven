@@ -17,20 +17,8 @@ type User struct {
 }
 
 // NewApp generates and returns an instance of the app
-func NewApp(suppliedConfig enliven.Config) *App {
-	var config = enliven.Config{
-		"user.login.route":    "/user/login",
-		"user.logout.route":   "/user/logout",
-		"user.register.route": "/user/register",
-	}
-
-	config = enliven.MergeConfig(config, suppliedConfig)
-
-	return &App{
-		loginRoute:    config["user.login.route"],
-		logoutRoute:   config["user.logout.route"],
-		registerRoute: config["user.register.route"],
-	}
+func NewApp() *App {
+	return &App{}
 }
 
 // App handles adding a route handler for static assets
@@ -42,6 +30,18 @@ type App struct {
 
 // Initialize sets up our app to handle embedded static asset requests
 func (sap *App) Initialize(ev *enliven.Enliven) {
+	var config = enliven.Config{
+		"user.login.route":    "/user/login",
+		"user.logout.route":   "/user/logout",
+		"user.register.route": "/user/register",
+	}
+
+	config = enliven.MergeConfig(config, ev.GetConfig())
+
+	sap.loginRoute = config["user.login.route"]
+	sap.logoutRoute = config["user.logout.route"]
+	sap.registerRoute = config["user.register.route"]
+
 	ev.GetDatabase().AutoMigrate(&User{})
 
 	ev.AddMiddlewareFunc(SessionMiddleware)
