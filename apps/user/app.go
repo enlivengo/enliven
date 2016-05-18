@@ -6,8 +6,31 @@ import (
 	"strconv"
 
 	"github.com/hickeroar/enliven"
+	"github.com/hickeroar/enliven/apps/database"
 	"github.com/jinzhu/gorm"
 )
+
+// GetUser returns an instance of the User model
+func GetUser(ctx *enliven.Context) *User {
+	// If they're not logged in, return 0
+	if ctx.Items["UserLoggedIn"] == "0" {
+		return nil
+	}
+
+	// The user may be cached from an earlier lookup.
+	if user, ok := ctx.Storage["User"]; ok {
+		return user.(*User)
+	}
+
+	var user User
+	dbUserID, _ := strconv.Atoi(ctx.Items["UserID"])
+	database.GetDatabase(ctx, ctx.Enliven.GetConfig()["user.database.namespace"]).First(&user, dbUserID)
+
+	// Caching the user lookup for later.
+	ctx.Storage["User"] = &user
+
+	return &user
+}
 
 // User describes the user database structure.
 type User struct {
@@ -98,12 +121,20 @@ func (ua *App) Initialize(ev *enliven.Enliven) {
 		"user.register.template": "",
 		"user.verify.template":   "",
 		"user.password.template": "",
+
+		"user.database.namespace": "default",
 	}
 
 	config = enliven.MergeConfig(config, ev.GetConfig())
 
+	db := database.GetDatabase(&enliven.Context{Enliven: ev}, config["user.database.namespace"])
+
+	if db == nil {
+		panic("The User app is unable to locate the '" + config["user.database.namespace"] + "' database. A valid database is required.")
+	}
+
 	// Migrating the user tables
-	ev.GetDatabase().AutoMigrate(&User{}, &Group{}, &Permission{})
+	db.AutoMigrate(&User{}, &Group{}, &Permission{})
 
 	// Routing setup
 	ev.AddRoute(config["user.login.route"], LoginGetHandler)
@@ -115,26 +146,4 @@ func (ua *App) Initialize(ev *enliven.Enliven) {
 // GetName returns the app's name
 func (ua *App) GetName() string {
 	return "user"
-}
-
-// GetUser returns an instance of the User model
-func GetUser(ctx *enliven.Context) *User {
-	// If they're not logged in, return 0
-	if ctx.Items["UserLoggedIn"] == "0" {
-		return nil
-	}
-
-	// The user may be cached from an earlier lookup.
-	if user, ok := ctx.Storage["User"]; ok {
-		return user.(*User)
-	}
-
-	var user User
-	dbUserID, _ := strconv.Atoi(ctx.Items["UserID"])
-	ctx.Enliven.GetDatabase().First(&user, dbUserID)
-
-	// Caching the user lookup for later.
-	ctx.Storage["User"] = &user
-
-	return &user
 }

@@ -4,11 +4,9 @@ import (
 	"fmt"
 	"net/http"
 	"path"
-	"strings"
 
 	"github.com/gorilla/context"
 	"github.com/gorilla/mux"
-	"github.com/jinzhu/gorm"
 
 	// Adding DB requirements.
 	_ "github.com/jinzhu/gorm/dialects/mssql"
@@ -65,7 +63,7 @@ type Context struct {
 	Session  ISession
 	Items    map[string]string
 	Storage  map[string]interface{}
-	Enliven  Enliven
+	Enliven  *Enliven
 	Response http.ResponseWriter
 	Request  *http.Request
 }
@@ -98,7 +96,7 @@ type CHandler func(*Context)
 func (ch CHandler) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	ctx := &Context{
 		Items:    make(map[string]string),
-		Enliven:  enliven,
+		Enliven:  &enliven,
 		Response: rw,
 		Request:  r,
 	}
@@ -173,7 +171,6 @@ func New(config Config) *Enliven {
 
 	enliven.RegisterService("router", mux.NewRouter())
 	enliven.registerConfig(config)
-	enliven.registerDatabase()
 
 	return &enliven
 }
@@ -181,100 +178,10 @@ func New(config Config) *Enliven {
 // addConfig created and registers the app config
 func (ev *Enliven) registerConfig(suppliedConfig Config) {
 	var enlivenConfig = Config{
-		"db.driver":     "",
-		"db.host":       "",
-		"db.user":       "",
-		"db.dbname":     "",
-		"db.password":   "",
-		"db.sslmode":    "disable",
-		"db.port":       "",
-		"db.connString": "",
-
 		"server.port": "8000",
 	}
 
 	ev.RegisterService("config", MergeConfig(enlivenConfig, suppliedConfig))
-}
-
-// addDatabase Initializes a database given the values from the EnlivenConfig
-func (ev *Enliven) registerDatabase() {
-	config := ev.GetConfig()
-
-	var driver string
-	allowedDrivers := [4]string{"postgres", "mysql", "sqlite3", "mssql"}
-
-	// Making sure the specified driver is in the list if allowed drivers
-	for i := 0; i < 4; i++ {
-		if allowedDrivers[i] == config["db.driver"] {
-			driver = config["db.driver"]
-			break
-		}
-	}
-
-	// If we didn't set a driver, we return here.
-	if driver == "" {
-		return
-	}
-
-	var connString string
-
-	// Someone can specify a whole connection string, or the parts of it
-	if config["db.connString"] != "" {
-		connString = config["db.connString"]
-	} else {
-		// driver specific connection string addons
-		switch driver {
-
-		case "sqlite3":
-			// If the driver is sqlite3, but there wasn't a conn string, we return.
-			if config["db.connString"] == "" {
-				return
-			}
-
-		case "mysql", "mssql":
-			connString = config["db.user"] + ":" + config["db.password"] + "@" + config["db.host"]
-
-			// Adding a port if one was provided
-			if len(config["db.port"]) > 0 {
-				connString += ":" + config["db.port"]
-			}
-
-			connString += "/" + config["db.dbname"]
-
-			if driver == "mysql" {
-				connString += "?charset=utf8&parseTime=True&loc=Local"
-			}
-
-		case "postgres":
-			var connStringParts []string
-			connStringParts = append(connStringParts, "host="+config["db.host"])
-			connStringParts = append(connStringParts, "user="+config["db.user"])
-			connStringParts = append(connStringParts, "dbname="+config["db.dbname"])
-			connStringParts = append(connStringParts, "sslmode="+config["db.sslmode"])
-			connStringParts = append(connStringParts, "password="+config["db.password"])
-
-			if len(config["db.port"]) > 0 {
-				connStringParts = append(connStringParts, "port="+config["db.port"])
-			}
-
-			connString = strings.Join(connStringParts, " ")
-		}
-	}
-
-	db, err := gorm.Open(driver, connString)
-
-	// Making sure we got a database instance
-	if err != nil {
-		panic(err)
-	}
-
-	// Making sure we can ping the database
-	err = db.DB().Ping()
-	if err != nil {
-		panic(err)
-	}
-
-	ev.RegisterService("database", db)
 }
 
 // RegisterService registers an enliven service or dependency
@@ -313,14 +220,6 @@ func (ev *Enliven) AppInstalled(name string) bool {
 	}
 
 	return false
-}
-
-// GetDatabase Gets an instance of the database
-func (ev *Enliven) GetDatabase() *gorm.DB {
-	if db, ok := ev.GetService("database").(*gorm.DB); ok {
-		return db
-	}
-	return nil
 }
 
 // GetConfig Gets an instance of the config
