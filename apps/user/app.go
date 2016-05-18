@@ -5,6 +5,8 @@ package user
 import (
 	"strconv"
 
+	"golang.org/x/crypto/bcrypt"
+
 	"github.com/hickeroar/enliven"
 	"github.com/hickeroar/enliven/apps/database"
 	"github.com/jinzhu/gorm"
@@ -30,6 +32,25 @@ func GetUser(ctx *enliven.Context) *User {
 	ctx.Storage["User"] = &user
 
 	return &user
+}
+
+// GeneratePasswordHash produces a bcrypt hash and returns it
+func GeneratePasswordHash(password string, cost ...int) string {
+	var bcryptCost int
+	if len(cost) > 0 {
+		bcryptCost = cost[0]
+	} else {
+		bcryptCost = 12
+	}
+
+	hash, _ := bcrypt.GenerateFromPassword([]byte(password), bcryptCost)
+	return string(hash[:])
+}
+
+// VerifyPasswordHash checks a password for validity
+func VerifyPasswordHash(password string, hash string) bool {
+	err := bcrypt.CompareHashAndPassword([]byte(password), []byte(hash))
+	return (err == nil)
 }
 
 // User describes the user database structure.
@@ -116,16 +137,25 @@ func (ua *App) Initialize(ev *enliven.Enliven) {
 		"user.verify.route":   "/user/verify/",
 		"user.password.route": "/user/password/",
 
+		// Full text template text
 		"user.login.template":    "",
 		"user.logout.template":   "",
 		"user.register.template": "",
 		"user.verify.template":   "",
 		"user.password.template": "",
 
+		// Where the user will be redirected after these successful actions.
+		"user.login.redirect":    "/",
+		"user.logout.redirect":   "/",
+		"user.register.redirect": "/",
+		"user.password.redirect": "/",
+		"user.verify.redirect":   "/",
+
 		"user.database.namespace": "default",
 	}
 
 	config = enliven.MergeConfig(config, ev.GetConfig())
+	ev.AppendConfig(config)
 
 	db := database.GetDatabase(&enliven.Context{Enliven: ev}, config["user.database.namespace"])
 
@@ -137,7 +167,8 @@ func (ua *App) Initialize(ev *enliven.Enliven) {
 	db.AutoMigrate(&User{}, &Group{}, &Permission{})
 
 	// Routing setup
-	ev.AddRoute(config["user.login.route"], LoginGetHandler)
+	ev.AddRoute(config["user.login.route"], LoginGetHandler, "GET")
+	ev.AddRoute(config["user.login.route"], LoginPostHandler, "POST")
 
 	// Handles the setup of context variables to support user session management
 	ev.AddMiddlewareFunc(SessionMiddleware)

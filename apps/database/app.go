@@ -60,6 +60,7 @@ func (da *App) Initialize(ev *enliven.Enliven) {
 	config[namespace+"database.connString"] = ""
 
 	config = enliven.MergeConfig(config, ev.GetConfig())
+	ev.AppendConfig(config)
 
 	var driver string
 	allowedDrivers := [4]string{"postgres", "mysql", "sqlite3", "mssql"}

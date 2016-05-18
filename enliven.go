@@ -2,8 +2,10 @@ package enliven
 
 import (
 	"fmt"
+	"html/template"
 	"net/http"
 	"path"
+	"strings"
 
 	"github.com/gorilla/context"
 	"github.com/gorilla/mux"
@@ -74,10 +76,19 @@ func (ctx *Context) String(output string) {
 	ctx.Response.Write([]byte(output))
 }
 
-// HTML sets up HTML headers and outputs an HTML response
+// HTML sets up HTML headers and outputs a string response
 func (ctx *Context) HTML(output string) {
 	ctx.Response.Header().Set("Content-Type", "text/html")
 	ctx.Response.Write([]byte(output))
+}
+
+// Template sets up HTML headers and outputs an html/template response
+func (ctx *Context) Template(tmpl *template.Template) {
+	ctx.Response.Header().Set("Content-Type", "text/html")
+	err := tmpl.Execute(ctx.Response, ctx)
+	if err != nil {
+		ctx.String(err.Error())
+	}
 }
 
 // JSON sets up JSON headers and outputs a JSON response
@@ -85,6 +96,18 @@ func (ctx *Context) HTML(output string) {
 func (ctx *Context) JSON(output []byte) {
 	ctx.Response.Header().Set("Content-Type", "application/json")
 	ctx.Response.Write(output)
+}
+
+// Redirect is a shortcut for redirecting a browser to a new URL
+func (ctx *Context) Redirect(location string, status ...int) {
+	var statusCode int
+	if len(status) > 0 {
+		statusCode = status[0]
+	} else {
+		statusCode = 300
+	}
+
+	http.Redirect(ctx.Response, ctx.Request, location, statusCode)
 }
 
 // --------------------------------------------------
@@ -222,6 +245,11 @@ func (ev *Enliven) AppInstalled(name string) bool {
 	return false
 }
 
+// AppendConfig merges and adds config to the enliven config
+func (ev *Enliven) AppendConfig(suppliedConfig Config) {
+	ev.services["config"] = MergeConfig(ev.GetConfig(), suppliedConfig)
+}
+
 // GetConfig Gets an instance of the config
 func (ev *Enliven) GetConfig() Config {
 	config := ev.GetService("config").(Config)
@@ -269,7 +297,16 @@ func (ev *Enliven) buildMiddleware(handlers []IMiddlewareHandler) Middleware {
 // AddRoute Registers a handler for a given route.
 // We register a dummy route with mux, and then store the provided handler
 // which we'll use later in order to inject dependencies into the handler func.
-func (ev *Enliven) AddRoute(path string, rhf func(*Context)) *mux.Route {
+func (ev *Enliven) AddRoute(path string, rhf func(*Context), methods ...string) *mux.Route {
+	if len(methods) > 0 {
+		// We store a reference to their handler for each of the methods if they passed some in
+		for _, method := range methods {
+			ev.routeHandlers[path+" | "+strings.ToUpper(method)] = RouteHandlerFunc(rhf)
+		}
+		return ev.GetRouter().HandleFunc(path, func(http.ResponseWriter, *http.Request) {}).Methods(methods...)
+	}
+
+	// We store a simple reference to their route handler without method expectations if none were provided
 	ev.routeHandlers[path] = RouteHandlerFunc(rhf)
 	return ev.GetRouter().HandleFunc(path, func(http.ResponseWriter, *http.Request) {})
 }
@@ -292,7 +329,9 @@ func cleanPath(p string) string {
 // Copied w/ many alterations from github.com/gorilla/mux
 // Hijacks the abilities of mux to add our DI handling to route handlers
 func routeHandlerFunc(ctx *Context, next NextHandlerFunc) {
+	config := ctx.Enliven.GetConfig()
 
+	fmt.Println(config["server.port"])
 	// Clean path to canonical form and redirect.
 	if p := cleanPath(ctx.Request.URL.Path); p != ctx.Request.URL.Path {
 		url := *ctx.Request.URL
@@ -318,8 +357,11 @@ func routeHandlerFunc(ctx *Context, next NextHandlerFunc) {
 		handler.ServeHTTP(ctx.Response, ctx.Request)
 	} else {
 		// We use the request path to look up our stored route handler if it exists
-		if routeHandler, ok := ctx.Enliven.routeHandlers[ctx.Request.URL.Path]; ok {
-			// Calling the route handler with Enliven passed in.
+		if routeHandler, ok := ctx.Enliven.routeHandlers[ctx.Request.URL.Path+" | "+strings.ToUpper(ctx.Request.Method)]; ok {
+			// Calling the route handle specific to a certain method
+			routeHandler(ctx)
+		} else if routeHandler, ok := ctx.Enliven.routeHandlers[ctx.Request.URL.Path]; ok {
+			// Calling the route handler that handles multiple routes.
 			routeHandler(ctx)
 		} else {
 			// Using handler request handling otherwise.
