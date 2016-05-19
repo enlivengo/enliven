@@ -19,7 +19,7 @@
             {
                 "match": ".html",
                 "isAsync": false,
-                "cmd": "cd ${workspaceRoot} && rm -f ./apps/user/templates.go"
+                "cmd": "cd ${workspaceRoot} && rm -f ./apps/user/templates.go ./templates/templates.go"
             },
             {
                 "match": ".html",

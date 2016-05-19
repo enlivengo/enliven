@@ -50,14 +50,14 @@ func (da *App) Initialize(ev *enliven.Enliven) {
 
 	// Setting up the default config
 	config := make(map[string]string)
-	config[namespace+"database.driver"] = ""
-	config[namespace+"database.host"] = ""
-	config[namespace+"database.user"] = ""
-	config[namespace+"database.dbname"] = ""
-	config[namespace+"database.password"] = ""
-	config[namespace+"database.sslmode"] = "disable"
-	config[namespace+"database.port"] = ""
-	config[namespace+"database.connString"] = ""
+	config[namespace+"database_driver"] = ""
+	config[namespace+"database_host"] = ""
+	config[namespace+"database_user"] = ""
+	config[namespace+"database_dbname"] = ""
+	config[namespace+"database_password"] = ""
+	config[namespace+"database_sslmode"] = "disable"
+	config[namespace+"database_port"] = ""
+	config[namespace+"database_connString"] = ""
 
 	config = enliven.MergeConfig(config, ev.GetConfig())
 	ev.AppendConfig(config)
@@ -67,8 +67,8 @@ func (da *App) Initialize(ev *enliven.Enliven) {
 
 	// Making sure the specified driver is in the list if allowed drivers
 	for i := 0; i < 4; i++ {
-		if allowedDrivers[i] == config[namespace+"database.driver"] {
-			driver = config[namespace+"database.driver"]
+		if allowedDrivers[i] == config[namespace+"database_driver"] {
+			driver = config[namespace+"database_driver"]
 			break
 		}
 	}
@@ -81,27 +81,27 @@ func (da *App) Initialize(ev *enliven.Enliven) {
 	var connString string
 
 	// Someone can specify a whole connection string, or the parts of it
-	if config[namespace+"database.connString"] != "" {
-		connString = config[namespace+"database.connString"]
+	if config[namespace+"database_connString"] != "" {
+		connString = config[namespace+"database_connString"]
 	} else {
 		// driver specific connection string addons
 		switch driver {
 
 		case "sqlite3":
 			// If the driver is sqlite3, but there wasn't a conn string, we return.
-			if config[namespace+"database.connString"] == "" {
+			if config[namespace+"database_connString"] == "" {
 				return
 			}
 
 		case "mysql", "mssql":
-			connString = config[namespace+"database.user"] + ":" + config[namespace+"database.password"] + "@" + config[namespace+"database.host"]
+			connString = config[namespace+"database_user"] + ":" + config[namespace+"database_password"] + "@" + config[namespace+"database_host"]
 
 			// Adding a port if one was provided
-			if len(config[namespace+"database.port"]) > 0 {
-				connString += ":" + config[namespace+"database.port"]
+			if len(config[namespace+"database_port"]) > 0 {
+				connString += ":" + config[namespace+"database_port"]
 			}
 
-			connString += "/" + config[namespace+"database.dbname"]
+			connString += "/" + config[namespace+"database_dbname"]
 
 			if driver == "mysql" {
 				connString += "?charset=utf8&parseTime=True&loc=Local"
@@ -109,14 +109,14 @@ func (da *App) Initialize(ev *enliven.Enliven) {
 
 		case "postgres":
 			var connStringParts []string
-			connStringParts = append(connStringParts, "host="+config[namespace+"database.host"])
-			connStringParts = append(connStringParts, "user="+config[namespace+"database.user"])
-			connStringParts = append(connStringParts, "dbname="+config[namespace+"database.dbname"])
-			connStringParts = append(connStringParts, "sslmode="+config[namespace+"database.sslmode"])
-			connStringParts = append(connStringParts, "password="+config[namespace+"database.password"])
+			connStringParts = append(connStringParts, "host="+config[namespace+"database_host"])
+			connStringParts = append(connStringParts, "user="+config[namespace+"database_user"])
+			connStringParts = append(connStringParts, "dbname="+config[namespace+"database_dbname"])
+			connStringParts = append(connStringParts, "sslmode="+config[namespace+"database_sslmode"])
+			connStringParts = append(connStringParts, "password="+config[namespace+"database_password"])
 
-			if len(config[namespace+"database.port"]) > 0 {
-				connStringParts = append(connStringParts, "port="+config[namespace+"database.port"])
+			if len(config[namespace+"database_port"]) > 0 {
+				connStringParts = append(connStringParts, "port="+config[namespace+"database_port"])
 			}
 
 			connString = strings.Join(connStringParts, " ")

@@ -79,14 +79,14 @@ func NewMemoryStorageMiddleware(suppliedConfig enliven.Config) *MemoryStorageMid
 	sessions = make(map[string]*StoredSession)
 
 	var config = enliven.Config{
-		"session.memory.ttl":      "86400",
-		"session.memory.purgettl": "1800",
+		"session_memory_ttl":      "86400",
+		"session_memory_purgettl": "1800",
 	}
 
 	config = enliven.MergeConfig(config, suppliedConfig)
 
-	purgeGap, _ := strconv.Atoi(config["session.memory.purgettl"])
-	sessionTTL, _ := strconv.Atoi(config["session.memory.ttl"])
+	purgeGap, _ := strconv.Atoi(config["session_memory_purgettl"])
+	sessionTTL, _ := strconv.Atoi(config["session_memory_ttl"])
 
 	return &MemoryStorageMiddleware{
 		lastPurge: int32(time.Now().Unix()),

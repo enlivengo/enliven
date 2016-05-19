@@ -92,21 +92,21 @@ func (fs *fileSession) Path() string {
 // NewFileStorageMiddleware generates an instance of FileStorageMiddleware
 func NewFileStorageMiddleware(suppliedConfig enliven.Config) *FileStorageMiddleware {
 	var config = enliven.Config{
-		"session.file.path":     "/tmp/",
-		"session.file.ttl":      "86400",
-		"session.file.purgettl": "1800",
+		"session_file_path":     "/tmp/",
+		"session_file_ttl":      "86400",
+		"session_file_purgettl": "1800",
 	}
 
 	config = enliven.MergeConfig(config, suppliedConfig)
 
-	dir := config["session.file.path"]
+	dir := config["session_file_path"]
 
 	if dir[len(dir)-1:] != "/" {
 		dir += "/"
 	}
 
-	purgeGap, _ := strconv.Atoi(config["session.file.purgettl"])
-	sessionTTL, _ := strconv.Atoi(config["session.file.ttl"])
+	purgeGap, _ := strconv.Atoi(config["session_file_purgettl"])
+	sessionTTL, _ := strconv.Atoi(config["session_file_ttl"])
 
 	return &FileStorageMiddleware{
 		path:      dir,

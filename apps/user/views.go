@@ -1,8 +1,8 @@
 package user
 
-import (
-	"html/template"
+//go:generate go-bindata -o templates.go -pkg user templates/...
 
+import (
 	"github.com/hickeroar/enliven"
 	"github.com/hickeroar/enliven/apps/database"
 )
@@ -11,7 +11,7 @@ import (
 func getTemplate(ctx *enliven.Context, templateType string) string {
 	config := ctx.Enliven.GetConfig()
 
-	requestedTemplate := config["user."+templateType+".template"]
+	requestedTemplate := config["user_"+templateType+"_template"]
 
 	if requestedTemplate == "" {
 		temp, _ := Asset("templates/" + templateType + ".html")
@@ -26,8 +26,9 @@ func getTemplate(ctx *enliven.Context, templateType string) string {
 
 // LoginGetHandler handles get requests to the login route
 func LoginGetHandler(ctx *enliven.Context) {
-	tmpl, _ := template.New("User_LoginGetHandler").Parse(getTemplate(ctx, "login"))
-	ctx.Template(tmpl)
+	templates := ctx.Enliven.GetTemplates()
+	templates.Parse(getTemplate(ctx, "login"))
+	ctx.Template(templates)
 }
 
 // LoginPostHandler handles the form submission for logging a user in.
@@ -37,16 +38,15 @@ func LoginPostHandler(ctx *enliven.Context) {
 	password := ctx.Request.Form.Get("password")
 
 	config := ctx.Enliven.GetConfig()
-	db := database.GetDatabase(ctx, config["user.database.namespace"])
+	db := database.GetDatabase(ctx, config["user_database_namespace"])
 
 	user := User{}
 	db.Where("Login = ?", username).First(&user)
 
 	if user.ID == 0 || !VerifyPasswordHash(password, user.Password) {
-		tmpl, _ := template.New("User_LoginGetHandler").Parse(getTemplate(ctx, "login"))
-		ctx.Template(tmpl)
+		LoginGetHandler(ctx)
 		return
 	}
 
-	ctx.Redirect(config["user.login.redirect"])
+	ctx.Redirect(config["user_login_redirect"])
 }

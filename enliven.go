@@ -1,5 +1,7 @@
 package enliven
 
+//go:generate go-bindata -o templates/templates.go -pkg templates templates/...
+
 import (
 	"fmt"
 	"html/template"
@@ -9,6 +11,7 @@ import (
 
 	"github.com/gorilla/context"
 	"github.com/gorilla/mux"
+	"github.com/hickeroar/enliven/templates"
 
 	// Adding DB requirements.
 	_ "github.com/jinzhu/gorm/dialects/mssql"
@@ -86,6 +89,15 @@ func (ctx *Context) HTML(output string) {
 func (ctx *Context) Template(tmpl *template.Template) {
 	ctx.Response.Header().Set("Content-Type", "text/html")
 	err := tmpl.Execute(ctx.Response, ctx)
+	if err != nil {
+		ctx.String(err.Error())
+	}
+}
+
+// NamedTemplate sets up HTML headers and outputs an html/template response for a specific template definition
+func (ctx *Context) NamedTemplate(tmpl *template.Template, templateName string) {
+	ctx.Response.Header().Set("Content-Type", "text/html")
+	err := tmpl.ExecuteTemplate(ctx.Response, templateName, ctx)
 	if err != nil {
 		ctx.String(err.Error())
 	}
@@ -179,7 +191,7 @@ func (m Middleware) ServeHTTP(ctx *Context) {
 // Enliven is....Enliven
 type Enliven struct {
 	services      map[string]interface{}
-	routeHandlers map[string]RouteHandlerFunc
+	routeHandlers map[string]map[string]RouteHandlerFunc
 	middleware    Middleware
 	handlers      []IMiddlewareHandler
 	apps          []string
@@ -188,12 +200,20 @@ type Enliven struct {
 // New (constructor) gets a new instance of enliven.
 func New(config Config) *Enliven {
 	enliven = Enliven{
-		services:      make(map[string]interface{}),
-		routeHandlers: make(map[string]RouteHandlerFunc),
+		services: make(map[string]interface{}),
+		routeHandlers: map[string]map[string]RouteHandlerFunc{
+			"ALL":    make(map[string]RouteHandlerFunc),
+			"GET":    make(map[string]RouteHandlerFunc),
+			"DELETE": make(map[string]RouteHandlerFunc),
+			"PATCH":  make(map[string]RouteHandlerFunc),
+			"POST":   make(map[string]RouteHandlerFunc),
+			"PUT":    make(map[string]RouteHandlerFunc),
+		},
 	}
 
 	enliven.RegisterService("router", mux.NewRouter())
 	enliven.registerConfig(config)
+	enliven.registerTemplates()
 
 	return &enliven
 }
@@ -202,9 +222,20 @@ func New(config Config) *Enliven {
 func (ev *Enliven) registerConfig(suppliedConfig Config) {
 	var enlivenConfig = Config{
 		"server.port": "8000",
+		"server_port": "8000",
 	}
 
 	ev.RegisterService("config", MergeConfig(enlivenConfig, suppliedConfig))
+}
+
+func (ev *Enliven) registerTemplates() {
+	headerTemplate, _ := templates.Asset("templates/header.html")
+	footerTemplate, _ := templates.Asset("templates/footer.html")
+
+	templates, _ := template.New("enliven").Parse(string(headerTemplate[:]))
+	templates.Parse(string(footerTemplate[:]))
+
+	ev.RegisterService("templates", templates)
 }
 
 // RegisterService registers an enliven service or dependency
@@ -256,6 +287,12 @@ func (ev *Enliven) GetConfig() Config {
 	return config
 }
 
+// GetTemplates gets the template instance so devs can add to and use it
+func (ev *Enliven) GetTemplates() *template.Template {
+	templates := ev.GetService("templates").(*template.Template)
+	return templates
+}
+
 // GetRouter Gets the instance of the router
 func (ev *Enliven) GetRouter() *mux.Router {
 	router := ev.GetService("router").(*mux.Router)
@@ -301,13 +338,18 @@ func (ev *Enliven) AddRoute(path string, rhf func(*Context), methods ...string) 
 	if len(methods) > 0 {
 		// We store a reference to their handler for each of the methods if they passed some in
 		for _, method := range methods {
-			ev.routeHandlers[path+" | "+strings.ToUpper(method)] = RouteHandlerFunc(rhf)
+			// If they provided a legit method, we silo this handler into that method
+			if _, ok := ev.routeHandlers[strings.ToUpper(method)]; ok {
+				ev.routeHandlers[strings.ToUpper(method)][path] = RouteHandlerFunc(rhf)
+			}
 		}
+		// Adding a dummy reference to a handler to mux which we'll override at execution-time, methods included
 		return ev.GetRouter().HandleFunc(path, func(http.ResponseWriter, *http.Request) {}).Methods(methods...)
 	}
 
 	// We store a simple reference to their route handler without method expectations if none were provided
-	ev.routeHandlers[path] = RouteHandlerFunc(rhf)
+	ev.routeHandlers["ALL"][path] = RouteHandlerFunc(rhf)
+	// Adding a dummy reference to a handler to mux which we'll override at execution-time, methods included
 	return ev.GetRouter().HandleFunc(path, func(http.ResponseWriter, *http.Request) {})
 }
 
@@ -329,9 +371,6 @@ func cleanPath(p string) string {
 // Copied w/ many alterations from github.com/gorilla/mux
 // Hijacks the abilities of mux to add our DI handling to route handlers
 func routeHandlerFunc(ctx *Context, next NextHandlerFunc) {
-	config := ctx.Enliven.GetConfig()
-
-	fmt.Println(config["server.port"])
 	// Clean path to canonical form and redirect.
 	if p := cleanPath(ctx.Request.URL.Path); p != ctx.Request.URL.Path {
 		url := *ctx.Request.URL
@@ -357,14 +396,14 @@ func routeHandlerFunc(ctx *Context, next NextHandlerFunc) {
 		handler.ServeHTTP(ctx.Response, ctx.Request)
 	} else {
 		// We use the request path to look up our stored route handler if it exists
-		if routeHandler, ok := ctx.Enliven.routeHandlers[ctx.Request.URL.Path+" | "+strings.ToUpper(ctx.Request.Method)]; ok {
-			// Calling the route handle specific to a certain method
+		if routeHandler, ok := ctx.Enliven.routeHandlers[strings.ToUpper(ctx.Request.Method)][ctx.Request.URL.Path]; ok {
+			// Calling the route handle specific to a certain method if we stored one
 			routeHandler(ctx)
-		} else if routeHandler, ok := ctx.Enliven.routeHandlers[ctx.Request.URL.Path]; ok {
-			// Calling the route handler that handles multiple routes.
+		} else if routeHandler, ok := ctx.Enliven.routeHandlers["ALL"][ctx.Request.URL.Path]; ok {
+			// Calling the route handler that handles all routes if we stored one
 			routeHandler(ctx)
 		} else {
-			// Using handler request handling otherwise.
+			// We didn't have a stored handler for this path/handler, so we execute the handler.
 			handler.ServeHTTP(ctx.Response, ctx.Request)
 		}
 	}

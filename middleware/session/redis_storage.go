@@ -75,19 +75,19 @@ func (rs *redisSession) SessionID() string {
 // NewRedisStorageMiddleware generates an instance of RedisStorageMiddleware
 func NewRedisStorageMiddleware(suppliedConfig enliven.Config) *RedisStorageMiddleware {
 	var config = enliven.Config{
-		"session.redis.address":  "127.0.0.1:6379",
-		"session.redis.password": "",
-		"session.redis.database": "0",
+		"session_redis_address":  "127.0.0.1:6379",
+		"session_redis_password": "",
+		"session_redis_database": "0",
 	}
 
 	config = enliven.MergeConfig(config, suppliedConfig)
 
-	database, _ := strconv.Atoi(config["session.redis.database"])
+	database, _ := strconv.Atoi(config["session_redis_database"])
 
 	return &RedisStorageMiddleware{
 		redisClient: redis.NewClient(&redis.Options{
-			Addr:     config["session.redis.address"],
-			Password: config["session.redis.password"],
+			Addr:     config["session_redis_address"],
+			Password: config["session_redis_password"],
 			DB:       int64(database),
 		}),
 	}

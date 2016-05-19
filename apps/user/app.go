@@ -1,7 +1,5 @@
 package user
 
-//go:generate go-bindata -o templates.go -pkg user templates/...
-
 import (
 	"strconv"
 
@@ -26,7 +24,7 @@ func GetUser(ctx *enliven.Context) *User {
 
 	var user User
 	dbUserID, _ := strconv.Atoi(ctx.Items["UserID"])
-	database.GetDatabase(ctx, ctx.Enliven.GetConfig()["user.database.namespace"]).First(&user, dbUserID)
+	database.GetDatabase(ctx, ctx.Enliven.GetConfig()["user_database_namespace"]).First(&user, dbUserID)
 
 	// Caching the user lookup for later.
 	ctx.Storage["User"] = &user
@@ -131,44 +129,44 @@ type App struct{}
 // Initialize sets up our app to handle embedded static asset requests
 func (ua *App) Initialize(ev *enliven.Enliven) {
 	var config = enliven.Config{
-		"user.login.route":    "/user/login/",
-		"user.logout.route":   "/user/logout/",
-		"user.register.route": "/user/register/",
-		"user.verify.route":   "/user/verify/",
-		"user.password.route": "/user/password/",
+		"user_login_route":    "/user/login/",
+		"user_logout_route":   "/user/logout/",
+		"user_register_route": "/user/register/",
+		"user_verify_route":   "/user/verify/",
+		"user_password_route": "/user/password/",
 
 		// Full text template text
-		"user.login.template":    "",
-		"user.logout.template":   "",
-		"user.register.template": "",
-		"user.verify.template":   "",
-		"user.password.template": "",
+		"user_login_template":    "",
+		"user_logout_template":   "",
+		"user_register_template": "",
+		"user_verify_template":   "",
+		"user_password_template": "",
 
-		// Where the user will be redirected after these successful actions.
-		"user.login.redirect":    "/",
-		"user.logout.redirect":   "/",
-		"user.register.redirect": "/",
-		"user.password.redirect": "/",
-		"user.verify.redirect":   "/",
+		// Where the user will be redirected after these successful actions_
+		"user_login_redirect":    "/",
+		"user_logout_redirect":   "/",
+		"user_register_redirect": "/",
+		"user_password_redirect": "/",
+		"user_verify_redirect":   "/",
 
-		"user.database.namespace": "default",
+		"user_database_namespace": "default",
 	}
 
 	config = enliven.MergeConfig(config, ev.GetConfig())
 	ev.AppendConfig(config)
 
-	db := database.GetDatabase(&enliven.Context{Enliven: ev}, config["user.database.namespace"])
+	db := database.GetDatabase(&enliven.Context{Enliven: ev}, config["user_database_namespace"])
 
 	if db == nil {
-		panic("The User app is unable to locate the '" + config["user.database.namespace"] + "' database. A valid database is required.")
+		panic("The User app is unable to locate the '" + config["user_database_namespace"] + "' database. A valid database is required.")
 	}
 
 	// Migrating the user tables
 	db.AutoMigrate(&User{}, &Group{}, &Permission{})
 
 	// Routing setup
-	ev.AddRoute(config["user.login.route"], LoginGetHandler, "GET")
-	ev.AddRoute(config["user.login.route"], LoginPostHandler, "POST")
+	ev.AddRoute(config["user_login_route"], LoginGetHandler, "GET")
+	ev.AddRoute(config["user_login_route"], LoginPostHandler, "POST")
 
 	// Handles the setup of context variables to support user session management
 	ev.AddMiddlewareFunc(SessionMiddleware)

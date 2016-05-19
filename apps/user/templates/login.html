@@ -1,15 +1,28 @@
-Login!
-<br /><br />
+{{template "header"}}
+
+<style type="text/css">
+    div.form-field {
+        width: 50%;
+        margin: 0 auto 20px;
+    }
+</style>
+
 <form method="POST">
-Email:
-<br />
-<input name="username" type="text" />
-<br /><br />
 
-Password:
-<br />
-<input name="password" type="password" />
-<br /><br />
+<div class="form-field">
+    <label for="username">Email:</label>
+    <input id="username" name="username" type="text" />
+</div>
 
-<input type="submit" value="Submit" />
+<div class="form-field">
+    <label for="username">Password:</label>
+    <input id="password" name="password" type="password" />
+</div>
+
+<div class="form-field">
+    <input type="submit" value="Submit" />
+</div>
+
 </form>
+
+{{template "footer"}}

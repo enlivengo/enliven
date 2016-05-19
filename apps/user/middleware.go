@@ -14,9 +14,13 @@ func SessionMiddleware(ctx *enliven.Context, next enliven.NextHandlerFunc) {
 	if userID == "" {
 		ctx.Items["UserLoggedIn"] = "0"
 		ctx.Items["UserID"] = "0"
+		ctx.Items["UserDisplayName"] = ""
 	} else {
 		ctx.Items["UserLoggedIn"] = "1"
 		ctx.Items["UserID"] = userID
+
+		// Caching the user so we can use it via storage.
+		GetUser(ctx)
 	}
 
 	next(ctx)
