@@ -221,7 +221,6 @@ func New(config Config) *Enliven {
 // addConfig created and registers the app config
 func (ev *Enliven) registerConfig(suppliedConfig Config) {
 	var enlivenConfig = Config{
-		"server.port": "8000",
 		"server_port": "8000",
 	}
 
