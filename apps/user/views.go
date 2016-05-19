@@ -26,8 +26,7 @@ func getTemplate(ctx *enliven.Context, templateType string) string {
 
 // LoginGetHandler handles get requests to the login route
 func LoginGetHandler(ctx *enliven.Context) {
-	templates := ctx.Enliven.GetTemplates()
-	templates.Parse(getTemplate(ctx, "login"))
+	templates, _ := ctx.Enliven.GetTemplates().Parse(getTemplate(ctx, "login"))
 	ctx.Template(templates)
 }
 

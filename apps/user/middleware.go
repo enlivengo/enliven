@@ -1,6 +1,10 @@
 package user
 
-import "github.com/hickeroar/enliven"
+import (
+	"strconv"
+
+	"github.com/hickeroar/enliven"
+)
 
 // SessionMiddleware handles adding the elements to the context that carry the user's id and status
 func SessionMiddleware(ctx *enliven.Context, next enliven.NextHandlerFunc) {
@@ -12,12 +16,11 @@ func SessionMiddleware(ctx *enliven.Context, next enliven.NextHandlerFunc) {
 
 	// If there isn't a user id in the session, we set context items accordingly
 	if userID == "" {
-		ctx.Items["UserLoggedIn"] = "0"
-		ctx.Items["UserID"] = "0"
-		ctx.Items["UserDisplayName"] = ""
+		ctx.Booleans["UserLoggedIn"] = false
+		ctx.Integers["UserID"] = 0
 	} else {
-		ctx.Items["UserLoggedIn"] = "1"
-		ctx.Items["UserID"] = userID
+		ctx.Booleans["UserLoggedIn"] = true
+		ctx.Integers["UserID"], _ = strconv.Atoi(userID)
 
 		// Caching the user so we can use it via storage.
 		GetUser(ctx)

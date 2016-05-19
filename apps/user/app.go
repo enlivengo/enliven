@@ -1,8 +1,6 @@
 package user
 
 import (
-	"strconv"
-
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/hickeroar/enliven"
@@ -13,7 +11,7 @@ import (
 // GetUser returns an instance of the User model
 func GetUser(ctx *enliven.Context) *User {
 	// If they're not logged in, return 0
-	if ctx.Items["UserLoggedIn"] == "0" {
+	if ctx.Booleans["UserLoggedIn"] == false {
 		return nil
 	}
 
@@ -23,7 +21,7 @@ func GetUser(ctx *enliven.Context) *User {
 	}
 
 	var user User
-	dbUserID, _ := strconv.Atoi(ctx.Items["UserID"])
+	dbUserID, _ := ctx.Integers["UserID"]
 	database.GetDatabase(ctx, ctx.Enliven.GetConfig()["user_database_namespace"]).First(&user, dbUserID)
 
 	// Caching the user lookup for later.
