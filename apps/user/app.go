@@ -25,7 +25,7 @@ func GetUser(ctx *enliven.Context) *User {
 	database.GetDatabase(ctx, ctx.Enliven.GetConfig()["user_database_namespace"]).First(&user, dbUserID)
 
 	// Caching the user lookup for later.
-	ctx.Storage["User"] = &user
+	ctx.Storage["User"] = user
 
 	return &user
 }
@@ -44,8 +44,8 @@ func GeneratePasswordHash(password string, cost ...int) string {
 }
 
 // VerifyPasswordHash checks a password for validity
-func VerifyPasswordHash(password string, hash string) bool {
-	err := bcrypt.CompareHashAndPassword([]byte(password), []byte(hash))
+func VerifyPasswordHash(hash string, password string) bool {
+	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
 	return (err == nil)
 }
 
@@ -54,11 +54,11 @@ type User struct {
 	gorm.Model
 
 	DisplayName      string
-	Age              int
 	Login            string `gorm:"type:varchar(100);unique_index;"`
 	Email            string `gorm:"type:varchar(100);unique_index;"`
 	Password         string `gorm:"type:varchar(100);"`
 	VerificationCode string `gorm:"type:varchar(100);unique_index;"`
+	Status           int    `gorm:"default:0;"`
 	Group            Group  `gorm:"not null"`
 	Superuser        bool
 }
@@ -161,13 +161,47 @@ func (ua *App) Initialize(ev *enliven.Enliven) {
 
 	// Migrating the user tables
 	db.AutoMigrate(&User{}, &Group{}, &Permission{})
+	ua.initDefaultUserModels(db)
 
 	// Routing setup
 	ev.AddRoute(config["user_login_route"], LoginGetHandler, "GET")
 	ev.AddRoute(config["user_login_route"], LoginPostHandler, "POST")
+	ev.AddRoute(config["user_logout_route"], LogoutHandler)
 
 	// Handles the setup of context variables to support user session management
 	ev.AddMiddlewareFunc(SessionMiddleware)
+}
+
+// initDefaultUser will set up the default admin user if the user database is empty.
+func (ua *App) initDefaultUserModels(db *gorm.DB) {
+	user := User{}
+	var count int
+	db.Find(&user).Count(&count)
+
+	if count > 0 {
+		return
+	}
+
+	member := Group{Name: "Member"}
+	db.Create(&member)
+
+	moderator := Group{Name: "Moderator", Inherits: &member}
+	db.Create(&moderator)
+
+	admin := Group{Name: "Administrator", Inherits: &moderator}
+	db.Create(&admin)
+
+	user = User{
+		DisplayName:      "Administrator",
+		Login:            "admin",
+		Email:            "admin@admin.admin",
+		Password:         GeneratePasswordHash("admin"),
+		VerificationCode: "",
+		Status:           1,
+		Group:            admin,
+		Superuser:        true,
+	}
+	db.Create(&user)
 }
 
 // GetName returns the app's name

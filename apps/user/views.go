@@ -3,6 +3,8 @@ package user
 //go:generate go-bindata -o templates.go -pkg user templates/...
 
 import (
+	"strconv"
+
 	"github.com/hickeroar/enliven"
 	"github.com/hickeroar/enliven/apps/database"
 )
@@ -42,10 +44,17 @@ func LoginPostHandler(ctx *enliven.Context) {
 	user := User{}
 	db.Where("Login = ?", username).First(&user)
 
-	if user.ID == 0 || !VerifyPasswordHash(password, user.Password) {
+	if user.ID == 0 || !VerifyPasswordHash(user.Password, password) {
 		LoginGetHandler(ctx)
 		return
 	}
 
+	ctx.Session.Set("user_id", strconv.FormatUint(uint64(user.ID), 10))
 	ctx.Redirect(config["user_login_redirect"])
+}
+
+// LogoutHandler logs a user out and redirects them to the configured page.
+func LogoutHandler(ctx *enliven.Context) {
+	ctx.Session.Destroy()
+	ctx.Redirect(ctx.Enliven.GetConfig()["user_logout_redirect"])
 }

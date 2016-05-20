@@ -118,7 +118,7 @@ func (ctx *Context) Redirect(location string, status ...int) {
 	if len(status) > 0 {
 		statusCode = status[0]
 	} else {
-		statusCode = 300
+		statusCode = 302
 	}
 
 	http.Redirect(ctx.Response, ctx.Request, location, statusCode)
@@ -135,6 +135,7 @@ func (ch CHandler) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 		Strings:  make(map[string]string),
 		Integers: make(map[string]int),
 		Booleans: make(map[string]bool),
+		Storage:  make(map[string]interface{}),
 		Enliven:  &enliven,
 		Response: rw,
 		Request:  r,

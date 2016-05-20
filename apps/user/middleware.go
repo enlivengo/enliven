@@ -12,7 +12,7 @@ func SessionMiddleware(ctx *enliven.Context, next enliven.NextHandlerFunc) {
 		panic("The User app requires Session middleware to be registered.")
 	}
 
-	userID := ctx.Session.Get("UserApp_LoggedInUserID")
+	userID := ctx.Session.Get("user_id")
 
 	// If there isn't a user id in the session, we set context items accordingly
 	if userID == "" {
