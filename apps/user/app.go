@@ -170,6 +170,11 @@ func (ua *App) Initialize(ev *enliven.Enliven) {
 	// Handles the setup of context variables to support user session management
 	ev.AddMiddlewareFunc(SessionMiddleware)
 
+	templates := ev.GetTemplates()
+	for _, t := range []string{"login", "password", "register", "verify"} {
+		templates.Parse(getTemplate(ev, t))
+	}
+
 	admin.AddResources(&User{}, &Group{}, &Permission{})
 }
 
@@ -208,4 +213,21 @@ func (ua *App) initDefaultUserModels(db *gorm.DB) {
 // GetName returns the app's name
 func (ua *App) GetName() string {
 	return "user"
+}
+
+// getTemplate looks up a template in config or embedded assets and returns its contents
+func getTemplate(ev *enliven.Enliven, templateType string) string {
+	config := ev.GetConfig()
+
+	requestedTemplate := config["user_"+templateType+"_template"]
+
+	if requestedTemplate == "" {
+		temp, _ := Asset("templates/" + templateType + ".html")
+
+		if len(temp) > 0 {
+			requestedTemplate = string(temp[:])
+		}
+	}
+
+	return requestedTemplate
 }

@@ -2599,32 +2599,32 @@
 					padding: 6em 0 4em 0;
 				}
 
-					#header h1 {
-						color: rgba(255, 255, 255, 0.65);
-					}
+				#header h1 {
+					color: rgba(255, 255, 255, 0.65);
+				}
 
-					#header .avatar {
+				#header .avatar {
+					border-radius: 100%;
+					display: inline-block;
+					margin: 0 0 2em 0;
+					padding: 0.5em;
+					border: solid 1px rgba(255, 255, 255, 0.25);
+					background-color: rgba(255, 255, 255, 0.075);
+				}
+
+					#header .avatar img {
 						border-radius: 100%;
-						display: inline-block;
-						margin: 0 0 2em 0;
-						padding: 0.5em;
-						border: solid 1px rgba(255, 255, 255, 0.25);
-						background-color: rgba(255, 255, 255, 0.075);
+						display: block;
+						width: 10em;
 					}
 
-						#header .avatar img {
-							border-radius: 100%;
-							display: block;
-							width: 10em;
-						}
+				@media screen and (max-width: 1280px) {
 
-					@media screen and (max-width: 1280px) {
-
-						#header {
-							padding: 4em 0 2em 0;
-						}
-
+					#header {
+						padding: 4em 0 2em 0;
 					}
+
+				}
 
 			/* Footer */
 
@@ -2633,21 +2633,27 @@
 					padding: 4em 0 4em 0;
 				}
 
-					#footer:before {
-						content: '';
-						border-top: solid 1px rgba(255, 255, 255, 0.25);
-						width: 10em;
-						display: block;
-						margin: 0 auto 3em auto;
+				#footer:before {
+					content: '';
+					border-top: solid 1px rgba(255, 255, 255, 0.25);
+					width: 10em;
+					display: block;
+					margin: 0 auto 3em auto;
+				}
+
+				@media screen and (max-width: 1280px) {
+
+					#footer {
+						padding: 2em 0 2em 0;
 					}
 
-					@media screen and (max-width: 1280px) {
-
-						#footer {
-							padding: 2em 0 2em 0;
-						}
-
-					}
+				}
+					
+			/* Span Avatar */
+				
+				span.avatar{
+					cursor: pointer;
+				}	
 
 		</style>
 	</head>

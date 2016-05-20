@@ -9,27 +9,10 @@ import (
 	"github.com/hickeroar/enliven/apps/database"
 )
 
-// getTemplate looks up a template in config or embedded assets and returns its contents
-func getTemplate(ctx *enliven.Context, templateType string) string {
-	config := ctx.Enliven.GetConfig()
-
-	requestedTemplate := config["user_"+templateType+"_template"]
-
-	if requestedTemplate == "" {
-		temp, _ := Asset("templates/" + templateType + ".html")
-
-		if len(temp) > 0 {
-			requestedTemplate = string(temp[:])
-		}
-	}
-
-	return requestedTemplate
-}
-
 // LoginGetHandler handles get requests to the login route
 func LoginGetHandler(ctx *enliven.Context) {
-	templates, _ := ctx.Enliven.GetTemplates().Parse(getTemplate(ctx, "login"))
-	ctx.Template(templates)
+	templates := ctx.Enliven.GetTemplates()
+	ctx.NamedTemplate(templates, "login")
 }
 
 // LoginPostHandler handles the form submission for logging a user in.

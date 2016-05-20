@@ -142,17 +142,15 @@ func (ctx *Context) Redirect(location string, status ...int) {
 // Forbidden returns a 403 status and the forbidden page.
 func (ctx *Context) Forbidden() {
 	ctx.Response.WriteHeader(http.StatusForbidden)
-	templateContent, _ := templates.Asset("templates/forbidden.html")
-	tmpl, _ := ctx.Enliven.GetTemplates().Parse(string(templateContent[:]))
-	ctx.Template(tmpl)
+	tmpl := ctx.Enliven.GetTemplates()
+	ctx.NamedTemplate(tmpl, "forbidden")
 }
 
 // NotFound returns a 404 status and the not-found page
 func (ctx *Context) NotFound() {
 	ctx.Response.WriteHeader(http.StatusNotFound)
-	templateContent, _ := templates.Asset("templates/notfound.html")
-	tmpl, _ := ctx.Enliven.GetTemplates().Parse(string(templateContent[:]))
-	ctx.Template(tmpl)
+	tmpl := ctx.Enliven.GetTemplates()
+	ctx.NamedTemplate(tmpl, "notfound")
 }
 
 // --------------------------------------------------
@@ -268,9 +266,13 @@ func (ev *Enliven) registerConfig(suppliedConfig Config) {
 func (ev *Enliven) registerTemplates() {
 	headerTemplate, _ := templates.Asset("templates/header.html")
 	footerTemplate, _ := templates.Asset("templates/footer.html")
+	forbiddenTemplate, _ := templates.Asset("templates/forbidden.html")
+	notfoundTemplate, _ := templates.Asset("templates/notfound.html")
 
 	templates, _ := template.New("enliven").Parse(string(headerTemplate[:]))
 	templates.Parse(string(footerTemplate[:]))
+	templates.Parse(string(forbiddenTemplate[:]))
+	templates.Parse(string(notfoundTemplate[:]))
 
 	ev.RegisterService("templates", templates)
 }
