@@ -1,6 +1,6 @@
 # Enliven
 
-## An easy to use web application framework in Go.
+## An easy to use web application framework in Go
 
 ### Features:
 
