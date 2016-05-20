@@ -18,12 +18,12 @@ func SessionMiddleware(ctx *enliven.Context, next enliven.NextHandlerFunc) {
 	if userID == "" {
 		ctx.Booleans["UserLoggedIn"] = false
 		ctx.Integers["UserID"] = 0
+		ctx.Booleans["UserSuperUser"] = false
 	} else {
 		ctx.Booleans["UserLoggedIn"] = true
 		ctx.Integers["UserID"], _ = strconv.Atoi(userID)
-
-		// Caching the user so we can use it via storage.
-		GetUser(ctx)
+		u := GetUser(ctx)
+		ctx.Booleans["UserSuperUser"] = u.Superuser
 	}
 
 	next(ctx)

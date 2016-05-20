@@ -49,7 +49,9 @@ func (aa *App) Initialize(ev *enliven.Enliven) {
 	}
 
 	//admin.SetAuth(&AdminAuth{})
-	admin.MountTo("/admin/", ev.GetRouter())
+	admin.MountTo("/admin", ev.GetRouter())
+
+	ev.RestrictRoute("/admin")
 
 	ev.RegisterService("admin", admin)
 }

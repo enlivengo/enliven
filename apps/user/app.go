@@ -11,8 +11,8 @@ import (
 
 // GetUser returns an instance of the User model
 func GetUser(ctx *enliven.Context) *User {
-	// If they're not logged in, return 0
-	if ctx.Booleans["UserLoggedIn"] == false {
+	// If they're not logged in or this app isn't installed, return 0
+	if !ctx.Enliven.AppInstalled("user") || ctx.Booleans["UserLoggedIn"] == false {
 		return nil
 	}
 

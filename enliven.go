@@ -75,6 +75,21 @@ type Context struct {
 	Request  *http.Request
 }
 
+// routeRestricted checks if a given route is restricted to superusers
+func (ctx *Context) routeRestricted() bool {
+	for path, length := range ctx.Enliven.restrictedRoutes {
+		// Checking if the current route is in the list of restricted one
+		if len(ctx.Request.URL.Path) >= length && string(ctx.Request.URL.Path[:length]) == path {
+			// If the user app isnt installed, or they're not a super user, this route is restricted
+			if !ctx.Enliven.AppInstalled("user") || !ctx.Booleans["UserSuperUser"] {
+				return true
+			}
+			return false
+		}
+	}
+	return false
+}
+
 // String sets up string headers and outputs a string response
 func (ctx *Context) String(output string) {
 	ctx.Response.Header().Set("Content-Type", "text/plain")
@@ -122,6 +137,22 @@ func (ctx *Context) Redirect(location string, status ...int) {
 	}
 
 	http.Redirect(ctx.Response, ctx.Request, location, statusCode)
+}
+
+// Forbidden returns a 403 status and the forbidden page.
+func (ctx *Context) Forbidden() {
+	ctx.Response.WriteHeader(http.StatusForbidden)
+	templateContent, _ := templates.Asset("templates/forbidden.html")
+	tmpl, _ := ctx.Enliven.GetTemplates().Parse(string(templateContent[:]))
+	ctx.Template(tmpl)
+}
+
+// NotFound returns a 404 status and the not-found page
+func (ctx *Context) NotFound() {
+	ctx.Response.WriteHeader(http.StatusNotFound)
+	templateContent, _ := templates.Asset("templates/notfound.html")
+	tmpl, _ := ctx.Enliven.GetTemplates().Parse(string(templateContent[:]))
+	ctx.Template(tmpl)
 }
 
 // --------------------------------------------------
@@ -195,17 +226,19 @@ func (m Middleware) ServeHTTP(ctx *Context) {
 
 // Enliven is....Enliven
 type Enliven struct {
-	services      map[string]interface{}
-	routeHandlers map[string]map[string]RouteHandlerFunc
-	middleware    Middleware
-	handlers      []IMiddlewareHandler
-	apps          []string
+	services         map[string]interface{}
+	restrictedRoutes map[string]int
+	routeHandlers    map[string]map[string]RouteHandlerFunc
+	middleware       Middleware
+	handlers         []IMiddlewareHandler
+	apps             []string
 }
 
 // New (constructor) gets a new instance of enliven.
 func New(config Config) *Enliven {
 	enliven = Enliven{
-		services: make(map[string]interface{}),
+		services:         make(map[string]interface{}),
+		restrictedRoutes: make(map[string]int),
 		routeHandlers: map[string]map[string]RouteHandlerFunc{
 			"ALL":    make(map[string]RouteHandlerFunc),
 			"GET":    make(map[string]RouteHandlerFunc),
@@ -357,6 +390,11 @@ func (ev *Enliven) AddRoute(path string, rhf func(*Context), methods ...string) 
 	return ev.GetRouter().HandleFunc(path, func(http.ResponseWriter, *http.Request) {})
 }
 
+// RestrictRoute restricts a specified route to superusers only
+func (ev *Enliven) RestrictRoute(path string) {
+	ev.restrictedRoutes[path] = len(path)
+}
+
 // Copied from github.com/gorilla/mux
 func cleanPath(p string) string {
 	if p == "" {
@@ -395,9 +433,11 @@ func routeHandlerFunc(ctx *Context, next NextHandlerFunc) {
 	if enliven.GetRouter().Match(ctx.Request, &match) {
 		handler = match.Handler
 	}
+
 	if handler == nil {
-		handler := http.NotFoundHandler()
-		handler.ServeHTTP(ctx.Response, ctx.Request)
+		ctx.NotFound()
+	} else if ctx.routeRestricted() {
+		ctx.Forbidden()
 	} else {
 		// We use the request path to look up our stored route handler if it exists
 		if routeHandler, ok := ctx.Enliven.routeHandlers[strings.ToUpper(ctx.Request.Method)][ctx.Request.URL.Path]; ok {
