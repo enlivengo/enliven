@@ -11,8 +11,7 @@ import (
 
 // LoginGetHandler handles get requests to the login route
 func LoginGetHandler(ctx *enliven.Context) {
-	templates := ctx.Enliven.GetTemplates()
-	ctx.NamedTemplate(templates, "login")
+	ctx.Template("login")
 }
 
 // LoginPostHandler handles the form submission for logging a user in.
