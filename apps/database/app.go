@@ -7,8 +7,8 @@ import (
 	"github.com/jinzhu/gorm"
 )
 
-// GetDatabase the database
-func GetDatabase(ctx *enliven.Context, namespace ...string) *gorm.DB {
+// GetDatabase returns the requested database
+func GetDatabase(ev *enliven.Enliven, namespace ...string) *gorm.DB {
 	var name string
 	if len(namespace) > 0 {
 		name = namespace[0]
@@ -16,7 +16,7 @@ func GetDatabase(ctx *enliven.Context, namespace ...string) *gorm.DB {
 		name = "default"
 	}
 
-	if db, ok := ctx.Enliven.GetService(name + "_database").(*gorm.DB); ok {
+	if db, ok := ev.GetService(name + "_database").(*gorm.DB); ok {
 		return db
 	}
 	return nil

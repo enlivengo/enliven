@@ -22,7 +22,7 @@ func GetUser(ctx *enliven.Context) *User {
 
 	var user User
 	dbUserID, _ := ctx.Integers["UserID"]
-	database.GetDatabase(ctx, ctx.Enliven.GetConfig()["user_database_namespace"]).First(&user, dbUserID)
+	database.GetDatabase(ctx.Enliven).First(&user, dbUserID)
 
 	// Caching the user lookup for later.
 	ctx.Storage["User"] = user
@@ -126,6 +126,10 @@ type App struct{}
 
 // Initialize sets up our app to handle embedded static asset requests
 func (ua *App) Initialize(ev *enliven.Enliven) {
+	if !ev.AppInstalled("default_database") {
+		panic("The User app requires that the Database app is initialized with a default connection.")
+	}
+
 	var config = enliven.Config{
 		"user_login_route":    "/user/login/",
 		"user_logout_route":   "/user/logout/",
@@ -146,18 +150,12 @@ func (ua *App) Initialize(ev *enliven.Enliven) {
 		"user_register_redirect": "/",
 		"user_password_redirect": "/",
 		"user_verify_redirect":   "/",
-
-		"user_database_namespace": "default",
 	}
 
 	config = enliven.MergeConfig(config, ev.GetConfig())
 	ev.AppendConfig(config)
 
-	db := database.GetDatabase(&enliven.Context{Enliven: ev}, config["user_database_namespace"])
-
-	if db == nil {
-		panic("The User app is unable to locate the '" + config["user_database_namespace"] + "' database. A valid database is required.")
-	}
+	db := database.GetDatabase(ev)
 
 	// Migrating the user tables
 	db.AutoMigrate(&User{}, &Group{}, &Permission{})

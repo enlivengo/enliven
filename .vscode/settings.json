@@ -11,6 +11,7 @@
                 "isAsync": false,
                 "cmd": "cd ${workspaceRoot} && go get"
             },
+            
             {
                 "match": ".html",
                 "isAsync": false,
@@ -25,7 +26,39 @@
                 "match": ".html",
                 "isAsync": false,
                 "cmd": "cd ${workspaceRoot} && go generate ./..."
-            }
+            },
+            
+            {
+                "match": ".tmpl",
+                "isAsync": false,
+                "cmd": "killall debug"
+            },
+            {
+                "match": ".tmpl",
+                "isAsync": false,
+                "cmd": "cd ${workspaceRoot} && rm -f ./templates/templates.go ./apps/admin/templates.go ./apps/user/templates.go"
+            },
+            {
+                "match": ".tmpl",
+                "isAsync": false,
+                "cmd": "cd ${workspaceRoot} && go generate ./..."
+            },
+            
+            {
+                "match": ".css",
+                "isAsync": false,
+                "cmd": "killall debug"
+            },
+            {
+                "match": ".css",
+                "isAsync": false,
+                "cmd": "cd ${workspaceRoot} && rm -f ./apps/user/templates.go ./templates/templates.go"
+            },
+            {
+                "match": ".css",
+                "isAsync": false,
+                "cmd": "cd ${workspaceRoot} && go generate ./..."
+            },
         ]
     }
 }

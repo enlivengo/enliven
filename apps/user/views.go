@@ -39,7 +39,7 @@ func LoginPostHandler(ctx *enliven.Context) {
 	password := ctx.Request.Form.Get("password")
 
 	config := ctx.Enliven.GetConfig()
-	db := database.GetDatabase(ctx, config["user_database_namespace"])
+	db := database.GetDatabase(ctx.Enliven)
 
 	user := User{}
 	db.Where("Login = ?", username).First(&user)
