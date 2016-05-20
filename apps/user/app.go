@@ -4,6 +4,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/hickeroar/enliven"
+	"github.com/hickeroar/enliven/apps/admin"
 	"github.com/hickeroar/enliven/apps/database"
 	"github.com/jinzhu/gorm"
 )
@@ -168,6 +169,8 @@ func (ua *App) Initialize(ev *enliven.Enliven) {
 
 	// Handles the setup of context variables to support user session management
 	ev.AddMiddlewareFunc(SessionMiddleware)
+
+	admin.AddResources(&User{}, &Group{}, &Permission{})
 }
 
 // initDefaultUser will set up the default admin user if the user database is empty.

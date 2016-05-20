@@ -5,9 +5,17 @@ package admin
 import (
 	"github.com/hickeroar/enliven"
 	"github.com/hickeroar/enliven/apps/database"
-	"github.com/hickeroar/enliven/apps/user"
 	"github.com/qor/qor"
 )
+
+var adminResources []interface{}
+
+// AddResources adds models to qor/admin
+func AddResources(resources ...interface{}) {
+	for _, res := range resources {
+		adminResources = append(adminResources, res)
+	}
+}
 
 // GetAdmin returns our instance of qor/admin
 func GetAdmin(ev *enliven.Enliven) *Admin {
@@ -28,16 +36,17 @@ type App struct {
 
 // Initialize sets up the qor/admin module
 func (aa *App) Initialize(ev *enliven.Enliven) {
-	if !ev.AppInstalled("user") {
-		panic("The Admin app requires that the User app is initialized first.")
+	if !ev.AppInstalled("default_database") {
+		panic("The Admin app requires that the Database app is initialized with a default connection.")
 	}
 
 	db := database.GetDatabase(ev, "default")
 
 	admin := New(&qor.Config{DB: db})
-	admin.AddResource(&user.User{})
-	admin.AddResource(&user.Group{})
-	admin.AddResource(&user.Permission{})
+
+	for _, resource := range adminResources {
+		admin.AddResource(resource)
+	}
 
 	//admin.SetAuth(&AdminAuth{})
 	admin.MountTo("/admin/", ev.GetRouter())
