@@ -23,7 +23,7 @@ func GetUser(ctx *enliven.Context) *User {
 
 	var user User
 	dbUserID, _ := ctx.Integers["UserID"]
-	database.GetDatabase(ctx.Enliven).First(&user, dbUserID)
+	database.GetDatabase(ctx.Enliven).Preload("Groups").Preload("Groups.Permissions").First(&user, dbUserID)
 
 	// Caching the user lookup for later.
 	ctx.Storage["User"] = &user
@@ -55,13 +55,13 @@ type User struct {
 	gorm.Model
 
 	DisplayName      string
-	Login            string `gorm:"type:varchar(100);unique_index;"`
-	Email            string `gorm:"type:varchar(100);unique_index;"`
-	Password         string `gorm:"type:varchar(100);"`
-	VerificationCode string `gorm:"type:varchar(100);unique_index;"`
-	Status           int    `gorm:"default:0;"`
-	Group            Group  `gorm:"not null"`
-	Superuser        bool
+	Login            string  `gorm:"type:varchar(100);unique_index;"`
+	Email            string  `gorm:"type:varchar(100);unique_index;"`
+	Password         string  `gorm:"type:varchar(100);"`
+	VerificationCode string  `gorm:"type:varchar(100);unique_index;"`
+	Status           int     `gorm:"default:0;"`
+	Groups           []Group `gorm:"many2many:user_group;"`
+	Superuser        bool    `gorm:"index"`
 }
 
 // UserHasPermission checks if a user has a specific permission
@@ -70,32 +70,12 @@ func (u *User) UserHasPermission(name string) bool {
 		return true
 	}
 
-	var groupStack []string
-	return u.userHasPermission(name, &u.Group, groupStack)
-}
-
-// userHasPermission recursively looks through a group's inheritance chain to look for a permission
-func (u *User) userHasPermission(name string, group *Group, groupStack []string) bool {
-	// Checking if this group has a permission matching the one we're looking for
-	for _, perm := range group.Permisions {
-		if name == perm.Name {
-			return true
-		}
-	}
-
-	// If this group inherits from another groups, we check that group for a permission
-	if group.Inherits != nil && group.Name != group.Inherits.Name {
-
-		// We're avoiding infinite group loops here by making sure we don't check a group more than once.
-		for _, stackGroup := range groupStack {
-			if stackGroup == group.Inherits.Name {
-				return false
+	for _, group := range u.Groups {
+		for _, perm := range group.Permissions {
+			if name == perm.Name {
+				return true
 			}
 		}
-		groupStack = append(groupStack, group.Inherits.Name)
-
-		// Recursively checking the group's inheritance chain.
-		return u.userHasPermission(name, group.Inherits, groupStack)
 	}
 
 	return false
@@ -105,16 +85,15 @@ func (u *User) userHasPermission(name string, group *Group, groupStack []string)
 type Group struct {
 	gorm.Model
 
-	Name       string `gorm:"not null;unique;"`
-	Inherits   *Group
-	Permisions []Permission
+	Name        string       `gorm:"not null;unique;"`
+	Permissions []Permission `gorm:"many2many:group_permission;"`
 }
 
 // Permission describes a permission that can be linked to many groups
 type Permission struct {
 	gorm.Model
 
-	Name string `gorm:"not_null;unique;"`
+	Name string `gorm:"not_null;unique_index;"`
 }
 
 // NewApp generates and returns an instance of the app
@@ -159,7 +138,7 @@ func (ua *App) Initialize(ev *enliven.Enliven) {
 	db := database.GetDatabase(ev)
 
 	// Migrating the user tables
-	db.AutoMigrate(&User{}, &Group{}, &Permission{})
+	db.AutoMigrate(&Permission{}, &Group{}, &User{})
 	ua.initDefaultUserModels(db)
 
 	// Routing setup
@@ -193,11 +172,9 @@ func (ua *App) initDefaultUserModels(db *gorm.DB) {
 
 	member := Group{Name: "Member"}
 	db.Create(&member)
-
-	moderator := Group{Name: "Moderator", Inherits: &member}
+	moderator := Group{Name: "Moderator"}
 	db.Create(&moderator)
-
-	admin := Group{Name: "Administrator", Inherits: &moderator}
+	admin := Group{Name: "Administrator"}
 	db.Create(&admin)
 
 	user = User{
@@ -207,7 +184,7 @@ func (ua *App) initDefaultUserModels(db *gorm.DB) {
 		Password:         GeneratePasswordHash("admin"),
 		VerificationCode: "",
 		Status:           1,
-		Group:            admin,
+		Groups:           []Group{member, moderator, admin},
 		Superuser:        true,
 	}
 	db.Create(&user)
@@ -225,6 +202,18 @@ func (ua *App) HasPermission(permission string, ctx *enliven.Context) bool {
 		return true
 	}
 	return false
+}
+
+// AddPermission adds a new permission to the user table if it doesn't exist
+func (ua *App) AddPermission(permission string, ev *enliven.Enliven) {
+	db := database.GetDatabase(ev)
+
+	perm := Permission{}
+	db.Where(&Permission{Name: permission}).First(&perm)
+
+	if perm.ID == 0 {
+		db.Create(&Permission{Name: permission})
+	}
 }
 
 // getTemplate looks up a template in config or embedded assets and returns its contents

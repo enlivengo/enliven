@@ -35,3 +35,6 @@ type PermissionHandler struct{}
 func (ph *PermissionHandler) HasPermission(permission string, ctx *Context) bool {
 	return true
 }
+
+// AddPermission is the default permission adder, and does nothing.
+func (ph *PermissionHandler) AddPermission(permission string, ev *Enliven) {}
