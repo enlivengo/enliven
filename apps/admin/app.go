@@ -48,11 +48,8 @@ func (aa *App) Initialize(ev *enliven.Enliven) {
 		admin.AddResource(resource)
 	}
 
-	//admin.SetAuth(&AdminAuth{})
+	admin.enliven = ev
 	admin.MountTo("/admin", ev.GetRouter())
-
-	ev.RestrictRoute("/admin")
-
 	ev.RegisterService("admin", admin)
 }
 

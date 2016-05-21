@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/hickeroar/enliven"
 	"github.com/qor/qor"
 	"github.com/qor/roles"
 )
@@ -265,7 +266,7 @@ func (admin *Admin) MountTo(mountTo string, mux *mux.Router) {
 		}
 	}
 
-	mux.PathPrefix(prefix).Handler(admin)
+	admin.enliven.AddRoute(prefix+"...", admin.ServeHTTP)
 
 	admin.compile()
 }
@@ -341,9 +342,14 @@ func (admin *Admin) compile() {
 }
 
 // ServeHTTP dispatches the handler registered in the matched route
-func (admin *Admin) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	var relativePath = strings.TrimPrefix(req.URL.Path, admin.router.Prefix)
-	var context = admin.NewContext(w, req)
+func (admin *Admin) ServeHTTP(ctx *enliven.Context) {
+	if !ctx.Enliven.GetPermissionChecker().HasPermission("admin-app", ctx) {
+		ctx.Forbidden()
+		return
+	}
+
+	var relativePath = strings.TrimPrefix(ctx.Request.URL.Path, admin.router.Prefix)
+	var context = admin.NewContext(ctx.Response, ctx.Request)
 
 	if regexp.MustCompile("^/assets/.*$").MatchString(relativePath) {
 		(&controller{Admin: admin}).Asset(context)
@@ -353,20 +359,20 @@ func (admin *Admin) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	defer func() func() {
 		begin := time.Now()
 		return func() {
-			log.Printf("Finish [%s] %s Took %.2fms\n", req.Method, req.RequestURI, time.Now().Sub(begin).Seconds()*1000)
+			log.Printf("Finish [%s] %s Took %.2fms\n", ctx.Request.Method, ctx.Request.RequestURI, time.Now().Sub(begin).Seconds()*1000)
 		}
 	}()()
 
 	var currentUser qor.CurrentUser
 	if admin.auth != nil {
 		if currentUser = admin.auth.GetCurrentUser(context); currentUser == nil {
-			http.Redirect(w, req, admin.auth.LoginURL(context), http.StatusSeeOther)
+			http.Redirect(ctx.Response, ctx.Request, admin.auth.LoginURL(context), http.StatusSeeOther)
 			return
 		}
 		context.CurrentUser = currentUser
 		context.SetDB(context.GetDB().Set("qor:current_user", context.CurrentUser))
 	}
-	context.Roles = roles.MatchedRoles(req, currentUser)
+	context.Roles = roles.MatchedRoles(ctx.Request, currentUser)
 
 	// Set Request Method
 	context.Request.ParseMultipartForm(2 * 1024 * 1024)

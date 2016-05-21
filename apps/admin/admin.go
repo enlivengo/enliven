@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/hickeroar/enliven"
 	"github.com/jinzhu/inflection"
 	"github.com/qor/qor"
 	"github.com/qor/qor/resource"
@@ -27,6 +28,7 @@ type Admin struct {
 	router           *Router
 	funcMaps         template.FuncMap
 	metaConfigorMaps map[string]func(*Meta)
+	enliven          *enliven.Enliven
 }
 
 // ResourceNamer is an interface for models that defined method `ResourceName`

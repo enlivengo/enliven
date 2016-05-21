@@ -26,7 +26,7 @@ func GetUser(ctx *enliven.Context) *User {
 	database.GetDatabase(ctx.Enliven).First(&user, dbUserID)
 
 	// Caching the user lookup for later.
-	ctx.Storage["User"] = user
+	ctx.Storage["User"] = &user
 
 	return &user
 }
@@ -64,18 +64,18 @@ type User struct {
 	Superuser        bool
 }
 
-// HasPermission checks if a user has a specific permission
-func (u *User) HasPermission(name string) bool {
+// UserHasPermission checks if a user has a specific permission
+func (u *User) UserHasPermission(name string) bool {
 	if u.Superuser {
 		return true
 	}
 
 	var groupStack []string
-	return u.hasPermission(name, &u.Group, groupStack)
+	return u.userHasPermission(name, &u.Group, groupStack)
 }
 
-// hasPermission recursively looks through a group's inheritance chain to look for a permission
-func (u *User) hasPermission(name string, group *Group, groupStack []string) bool {
+// userHasPermission recursively looks through a group's inheritance chain to look for a permission
+func (u *User) userHasPermission(name string, group *Group, groupStack []string) bool {
 	// Checking if this group has a permission matching the one we're looking for
 	for _, perm := range group.Permisions {
 		if name == perm.Name {
@@ -95,7 +95,7 @@ func (u *User) hasPermission(name string, group *Group, groupStack []string) boo
 		groupStack = append(groupStack, group.Inherits.Name)
 
 		// Recursively checking the group's inheritance chain.
-		return u.hasPermission(name, group.Inherits, groupStack)
+		return u.userHasPermission(name, group.Inherits, groupStack)
 	}
 
 	return false
@@ -176,6 +176,9 @@ func (ua *App) Initialize(ev *enliven.Enliven) {
 	}
 
 	admin.AddResources(&User{}, &Group{}, &Permission{})
+
+	// Setting this app as the permission checker
+	ev.SetPermissionChecker(ua)
 }
 
 // initDefaultUser will set up the default admin user if the user database is empty.
@@ -213,6 +216,15 @@ func (ua *App) initDefaultUserModels(db *gorm.DB) {
 // GetName returns the app's name
 func (ua *App) GetName() string {
 	return "user"
+}
+
+// HasPermission checks if a user has a permission matching the permission string passed in
+func (ua *App) HasPermission(permission string, ctx *enliven.Context) bool {
+	u := GetUser(ctx)
+	if u != nil && u.UserHasPermission(permission) {
+		return true
+	}
+	return false
 }
 
 // getTemplate looks up a template in config or embedded assets and returns its contents

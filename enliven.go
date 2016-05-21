@@ -12,229 +12,25 @@ import (
 	"github.com/gorilla/context"
 	"github.com/gorilla/mux"
 	"github.com/hickeroar/enliven/templates"
-
-	// Adding DB requirements.
-	_ "github.com/jinzhu/gorm/dialects/mssql"
-	_ "github.com/jinzhu/gorm/dialects/mysql"
-	_ "github.com/jinzhu/gorm/dialects/postgres"
-	_ "github.com/jinzhu/gorm/dialects/sqlite"
 )
 
 // We'll use this to create and insert the initial enliven instance into the handlers
 var enliven Enliven
 
-// --------------------------------------------------
-
-// Config represents string kvps of application configuration
-type Config map[string]string
-
-// MergeConfig takes a default config and merges a supplied one into it.
-func MergeConfig(defaultConfig Config, suppliedConfig Config) Config {
-	for key, value := range suppliedConfig {
-		defaultConfig[key] = value
-	}
-
-	return defaultConfig
-}
-
-// --------------------------------------------------
-
-// IApp is an interface for writing Enliven apps
-// Apps are basically packaged code to extend Enliven's functionality
-type IApp interface {
-	Initialize(*Enliven)
-	GetName() string
-}
-
-// ISession represents a session that session middleware must implement
-type ISession interface {
-	Set(key string, value string) error
-	Get(key string) string
-	Delete(key string) error
-	Destroy() error
-	SessionID() string
-}
-
-// IMiddlewareHandler is an interface to be used when writing Middleware
-// Copied w/ alterations from github.com/codegangsta/negroni
-type IMiddlewareHandler interface {
-	ServeHTTP(*Context, NextHandlerFunc)
-}
-
-// --------------------------------------------------
-
-// Context stores context variables and the session that will be passed to requests
-type Context struct {
-	Session  ISession
-	Strings  map[string]string
-	Integers map[string]int
-	Booleans map[string]bool
-	Storage  map[string]interface{}
-	Enliven  *Enliven
-	Response http.ResponseWriter
-	Request  *http.Request
-}
-
-// routeRestricted checks if a given route is restricted to superusers
-func (ctx *Context) routeRestricted() bool {
-	for path, length := range ctx.Enliven.restrictedRoutes {
-		// Checking if the current route is in the list of restricted one
-		if len(ctx.Request.URL.Path) >= length && string(ctx.Request.URL.Path[:length]) == path {
-			// If the user app isnt installed, or they're not a super user, this route is restricted
-			if !ctx.Enliven.AppInstalled("user") || !ctx.Booleans["UserSuperUser"] {
-				return true
-			}
-			return false
-		}
-	}
-	return false
-}
-
-// String sets up string headers and outputs a string response
-func (ctx *Context) String(output string) {
-	ctx.Response.Header().Set("Content-Type", "text/plain")
-	ctx.Response.Write([]byte(output))
-}
-
-// HTML sets up HTML headers and outputs a string response
-func (ctx *Context) HTML(output string) {
-	ctx.Response.Header().Set("Content-Type", "text/html")
-	ctx.Response.Write([]byte(output))
-}
-
-// AnonymousTemplate sets up HTML headers and outputs an html/template response
-func (ctx *Context) AnonymousTemplate(tmpl *template.Template) {
-	ctx.Response.Header().Set("Content-Type", "text/html")
-	err := tmpl.Execute(ctx.Response, ctx)
-	if err != nil {
-		ctx.String(err.Error())
-	}
-}
-
-// Template sets up HTML headers and outputs an html/template response for a specific template definition
-func (ctx *Context) Template(templateName string) {
-	ctx.Response.Header().Set("Content-Type", "text/html")
-	err := ctx.Enliven.GetTemplates().ExecuteTemplate(ctx.Response, templateName, ctx)
-	if err != nil {
-		ctx.String(err.Error())
-	}
-}
-
-// JSON sets up JSON headers and outputs a JSON response
-// Expects to recieve the result of json marshalling ([]byte)
-func (ctx *Context) JSON(output []byte) {
-	ctx.Response.Header().Set("Content-Type", "application/json")
-	ctx.Response.Write(output)
-}
-
-// Redirect is a shortcut for redirecting a browser to a new URL
-func (ctx *Context) Redirect(location string, status ...int) {
-	var statusCode int
-	if len(status) > 0 {
-		statusCode = status[0]
-	} else {
-		statusCode = 302
-	}
-
-	http.Redirect(ctx.Response, ctx.Request, location, statusCode)
-}
-
-// Forbidden returns a 403 status and the forbidden page.
-func (ctx *Context) Forbidden() {
-	ctx.Response.WriteHeader(http.StatusForbidden)
-	ctx.Template("forbidden")
-}
-
-// NotFound returns a 404 status and the not-found page
-func (ctx *Context) NotFound() {
-	ctx.Response.WriteHeader(http.StatusNotFound)
-	ctx.Template("notfound")
-}
-
-// --------------------------------------------------
-
-// CHandler Handles injecting the initial request context before passing handling on to the Middleware struct
-type CHandler func(*Context)
-
-// ServeHTTP is the first handler that gets hit when a request comes in.
-func (ch CHandler) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
-	ctx := &Context{
-		Strings:  make(map[string]string),
-		Integers: make(map[string]int),
-		Booleans: make(map[string]bool),
-		Storage:  make(map[string]interface{}),
-		Enliven:  &enliven,
-		Response: rw,
-		Request:  r,
-	}
-	ch(ctx)
-}
-
-// ContextHandler sets up serving the first request, and the handing off of subsequent requests to the Middleware struct
-func ContextHandler(h Middleware) CHandler {
-	return CHandler(func(ctx *Context) {
-		h.handler.ServeHTTP(ctx, h.next.ServeHTTP)
-	})
-}
-
-// --------------------------------------------------
-
-// NextHandlerFunc allow use of ordinary functions middleware handlers
-// Copied w/ alterations from github.com/codegangsta/negroni
-type NextHandlerFunc func(*Context)
-
-// Copied w/ alterations from github.com/codegangsta/negroni
-func (nh NextHandlerFunc) ServeHTTP(ctx *Context) {
-	nh(ctx)
-}
-
-// --------------------------------------------------
-
-// HandlerFunc allow use of ordinary functions middleware handlers
-// Copied w/ alterations from github.com/codegangsta/negroni
-type HandlerFunc func(*Context, NextHandlerFunc)
-
-// Copied w/ alterations from github.com/codegangsta/negroni
-func (h HandlerFunc) ServeHTTP(ctx *Context, next NextHandlerFunc) {
-	h(ctx, next)
-}
-
-// --------------------------------------------------
-
-// RouteHandlerFunc is an interface to be used when writing route handler functions
-type RouteHandlerFunc func(*Context)
-
-// --------------------------------------------------
-
-// Middleware Represents a piece of middlewear
-// Copied w/ alterations from github.com/codegangsta/negroni
-type Middleware struct {
-	handler IMiddlewareHandler
-	next    *Middleware
-}
-
-// Copied w/ alterations from github.com/codegangsta/negroni
-func (m Middleware) ServeHTTP(ctx *Context) {
-	m.handler.ServeHTTP(ctx, m.next.ServeHTTP)
-}
-
-// --------------------------------------------------
-
 // Enliven is....Enliven
 type Enliven struct {
-	services         map[string]interface{}
-	restrictedRoutes map[string]int
-	routeHandlers    map[string]map[string]RouteHandlerFunc
-	middleware       Middleware
-	handlers         []IMiddlewareHandler
-	apps             []string
+	services      map[string]interface{}
+	routeHandlers map[string]map[string]RouteHandlerFunc
+	middleware    Middleware
+	handlers      []IMiddlewareHandler
+	apps          []string
+	permissions   IPermissionChecker
 }
 
 // New (constructor) gets a new instance of enliven.
 func New(config Config) *Enliven {
 	enliven = Enliven{
-		services:         make(map[string]interface{}),
-		restrictedRoutes: make(map[string]int),
+		services: make(map[string]interface{}),
 		routeHandlers: map[string]map[string]RouteHandlerFunc{
 			"ALL":    make(map[string]RouteHandlerFunc),
 			"GET":    make(map[string]RouteHandlerFunc),
@@ -245,6 +41,7 @@ func New(config Config) *Enliven {
 		},
 	}
 
+	enliven.SetPermissionChecker(&PermissionHandler{})
 	enliven.RegisterService("router", mux.NewRouter())
 	enliven.registerConfig(config)
 	enliven.registerTemplates()
@@ -257,18 +54,22 @@ func (ev *Enliven) registerConfig(suppliedConfig Config) {
 	var enlivenConfig = Config{
 		"server_port": "8000",
 	}
-
 	ev.RegisterService("config", MergeConfig(enlivenConfig, suppliedConfig))
 }
 
+// This registers the default templates (header, footer, home, forbidden, and notfound)
+// It's expected that developers will override at least the header, footer, and home templates.
 func (ev *Enliven) registerTemplates() {
 	headerTemplate, _ := templates.Asset("templates/header.html")
 	footerTemplate, _ := templates.Asset("templates/footer.html")
+	homeTemplate, _ := templates.Asset("templates/home.html")
 	forbiddenTemplate, _ := templates.Asset("templates/forbidden.html")
 	notfoundTemplate, _ := templates.Asset("templates/notfound.html")
 
-	templates, _ := template.New("enliven").Parse(string(headerTemplate[:]))
+	templates := template.New("enliven")
+	templates.Parse(string(headerTemplate[:]))
 	templates.Parse(string(footerTemplate[:]))
+	templates.Parse(string(homeTemplate[:]))
 	templates.Parse(string(forbiddenTemplate[:]))
 	templates.Parse(string(notfoundTemplate[:]))
 
@@ -280,8 +81,17 @@ func (ev *Enliven) RegisterService(name string, service interface{}) {
 	if _, ok := ev.services[name]; ok {
 		panic("The service name you are attempting to register has already been registered.")
 	}
-
 	ev.services[name] = service
+}
+
+// SetPermissionChecker sets the enliven permission checker.
+func (ev *Enliven) SetPermissionChecker(checker IPermissionChecker) {
+	ev.permissions = checker
+}
+
+// GetPermissionChecker returns the enliven permission checker
+func (ev *Enliven) GetPermissionChecker() IPermissionChecker {
+	return ev.permissions
 }
 
 // GetService returns an enliven service or dependency
@@ -309,7 +119,6 @@ func (ev *Enliven) AppInstalled(name string) bool {
 			return true
 		}
 	}
-
 	return false
 }
 
@@ -372,6 +181,13 @@ func (ev *Enliven) buildMiddleware(handlers []IMiddlewareHandler) Middleware {
 // We register a dummy route with mux, and then store the provided handler
 // which we'll use later in order to inject dependencies into the handler func.
 func (ev *Enliven) AddRoute(path string, rhf func(*Context), methods ...string) *mux.Route {
+	var prefix string
+	if len(path) > 3 {
+		if string(path[(len(path)-3):]) == "..." {
+			prefix = string(path[:(len(path) - 3)])
+		}
+	}
+
 	if len(methods) > 0 {
 		// We store a reference to their handler for each of the methods if they passed some in
 		for _, method := range methods {
@@ -381,18 +197,19 @@ func (ev *Enliven) AddRoute(path string, rhf func(*Context), methods ...string) 
 			}
 		}
 		// Adding a dummy reference to a handler to mux which we'll override at execution-time, methods included
+		if prefix != "" {
+			return ev.GetRouter().PathPrefix(prefix).HandlerFunc(func(http.ResponseWriter, *http.Request) {}).Methods(methods...)
+		}
 		return ev.GetRouter().HandleFunc(path, func(http.ResponseWriter, *http.Request) {}).Methods(methods...)
 	}
 
 	// We store a simple reference to their route handler without method expectations if none were provided
 	ev.routeHandlers["ALL"][path] = RouteHandlerFunc(rhf)
 	// Adding a dummy reference to a handler to mux which we'll override at execution-time, methods included
+	if prefix != "" {
+		return ev.GetRouter().PathPrefix(prefix).HandlerFunc(func(http.ResponseWriter, *http.Request) {})
+	}
 	return ev.GetRouter().HandleFunc(path, func(http.ResponseWriter, *http.Request) {})
-}
-
-// RestrictRoute restricts a specified route to superusers only
-func (ev *Enliven) RestrictRoute(path string) {
-	ev.restrictedRoutes[path] = len(path)
 }
 
 // Copied from github.com/gorilla/mux
@@ -436,8 +253,6 @@ func routeHandlerFunc(ctx *Context, next NextHandlerFunc) {
 
 	if handler == nil {
 		ctx.NotFound()
-	} else if ctx.routeRestricted() {
-		ctx.Forbidden()
 	} else {
 		// We use the request path to look up our stored route handler if it exists
 		if routeHandler, ok := ctx.Enliven.routeHandlers[strings.ToUpper(ctx.Request.Method)][ctx.Request.URL.Path]; ok {
@@ -445,6 +260,12 @@ func routeHandlerFunc(ctx *Context, next NextHandlerFunc) {
 			routeHandler(ctx)
 		} else if routeHandler, ok := ctx.Enliven.routeHandlers["ALL"][ctx.Request.URL.Path]; ok {
 			// Calling the route handler that handles all routes if we stored one
+			routeHandler(ctx)
+		} else if routeHandler, ok := ctx.Enliven.routePrefix(ctx, strings.ToUpper(ctx.Request.Method)); ok {
+			// Per-method routing for path prefixes
+			routeHandler(ctx)
+		} else if routeHandler, ok := ctx.Enliven.routePrefix(ctx, "ALL"); ok {
+			// All-method routing for path prefixes
 			routeHandler(ctx)
 		} else {
 			// We didn't have a stored handler for this path/handler, so we execute the handler.
@@ -455,12 +276,30 @@ func routeHandlerFunc(ctx *Context, next NextHandlerFunc) {
 	next(ctx)
 }
 
+func (ev *Enliven) routePrefix(ctx *Context, method string) (RouteHandlerFunc, bool) {
+	var prefix string
+
+	for path, hf := range ctx.Enliven.routeHandlers[method] {
+		// Looking for paths that have ... on the end
+		if len(path) < 3 || len(ctx.Request.URL.Path) < (len(path)-3) || string(path[(len(path)-3):]) != "..." {
+			continue
+		}
+		prefix = string(path[:(len(path) - 3)])
+		// If the request path prefix is the same as the path (minus the ...)
+		if string(ctx.Request.URL.Path[:len(prefix)]) == prefix {
+			return hf, true
+		}
+	}
+
+	return nil, false
+}
+
 // Run executes the Enliven http server
 func (ev *Enliven) Run(port string) {
 	// Adding our route handler as the last piece of middleware
 	ev.AddMiddlewareFunc(routeHandlerFunc)
 
-	fmt.Println("Server is listening on port " + port + ".")
+	fmt.Println("Enliven server is listening on port " + port + ".")
 	http.ListenAndServe(":"+port, ContextHandler(ev.middleware))
-	fmt.Println("Server has shut down.")
+	fmt.Println("Enliven server has shut down.")
 }
