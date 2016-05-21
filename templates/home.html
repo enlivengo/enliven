@@ -1,5 +1,12 @@
 {{define "home"}}
 {{template "header"}}
-<div class="home" style="text-align:center;">Welcome: <strong>Home</strong></div>
+<div class="home" style="text-align:center;">
+    <strong>Welcome</strong>:
+    {{if .Booleans.UserLoggedIn}}
+        {{.Storage.User.DisplayName}}
+    {{else}}
+        Home
+    {{end}}
+</div>
 {{template "footer"}}
 {{end}}
