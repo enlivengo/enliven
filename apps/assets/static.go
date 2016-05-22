@@ -29,9 +29,8 @@ func (sa *StaticApp) Initialize(ev *enliven.Enliven) {
 		conf["assets_static_route"] += "/"
 	}
 
-	router := ev.GetRouter()
 	handler := http.StripPrefix(conf["assets_static_route"], http.FileServer(http.Dir(conf["assets_static_path"])))
-	router.PathPrefix(conf["assets_static_route"]).Handler(handler)
+	ev.Router.PathPrefix(conf["assets_static_route"]).Handler(handler)
 }
 
 // GetName returns the app's name

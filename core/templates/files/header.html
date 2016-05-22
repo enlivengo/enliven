@@ -2744,7 +2744,7 @@
                     <ul class="icons">
     					{{if .Booleans.UserLoggedIn}}
 							<li><a href="/user/profile/" class="icon style2 fa-product-hunt"><span class="label">Profile</span></a></li>
-							{{if .Enliven.GetPermissionChecker.HasPermission "admin-app" .}}
+							{{if .Enliven.Auth.HasPermission "admin-app" .}}
 								<li><a href="/admin/" class="icon style2 fa-rebel"><span class="label">Admin Panel</span></a></li>
 							{{end}}
 							<li><a href="/user/logout/" class="icon style2 fa-sign-out"><span class="label">Sign Out</span></a></li>

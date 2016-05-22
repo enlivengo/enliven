@@ -167,8 +167,8 @@ func (ua *App) Initialize(ev *enliven.Enliven) {
 
 	admin.AddResources(&User{}, &Group{}, &Permission{})
 
-	// Setting this app as the permission checker
-	ev.SetPermissionChecker(ua)
+	// Setting this app as the authorizer
+	ev.Auth = ua
 }
 
 // initDefaultUser will set up the default admin user if the user database is empty.

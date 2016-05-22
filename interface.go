@@ -24,8 +24,8 @@ type IMiddlewareHandler interface {
 	ServeHTTP(*Context, NextHandlerFunc)
 }
 
-// IPermissionChecker is an interface to be used when writing a struct for checking a permission
-type IPermissionChecker interface {
+// IAuthorizer is an interface to be used when writing a struct for checking a permission
+type IAuthorizer interface {
 	HasPermission(string, *Context) bool
 	// Name of the new permission, the enliven instance, groups that we want to add permission to
 	AddPermission(string, *Enliven, ...string)

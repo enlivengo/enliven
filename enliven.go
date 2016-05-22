@@ -12,24 +12,34 @@ import (
 	"github.com/hickeroar/enliven/core"
 )
 
-// We'll use this to create and insert the initial enliven instance into the handlers
+// Our instance of enliven that will be set up in request contexts
 var enliven Enliven
 
 // Enliven is....Enliven
 type Enliven struct {
-	services            map[string]interface{}
-	routeHandlers       map[string]map[string]RouteHandlerFunc
-	middleware          Middleware
-	handlers            []IMiddlewareHandler
+	Auth   IAuthorizer
+	Core   core.Core
+	Router *mux.Router
+
+	services      map[string]interface{}
+	routeHandlers map[string]map[string]RouteHandlerFunc
+	middleware    Middleware
+	handlers      []IMiddlewareHandler
+
+	// Supports the AppInstalled and MiddlewareInstalled boolean methods
 	installedApps       []string
 	installedMiddleware []string
-	permissions         IPermissionChecker
-	Core                core.Core
 }
 
-// New (constructor) gets a new instance of enliven.
+// New gets a new instance of enliven.
 func New(conf config.Config) *Enliven {
+	config.CreateConfig(config.MergeConfig(DefaultEnlivenConfig, conf))
+
 	enliven = Enliven{
+		Auth:   &DefaultAuth{},
+		Core:   core.NewCore(),
+		Router: mux.NewRouter(),
+
 		services: make(map[string]interface{}),
 		routeHandlers: map[string]map[string]RouteHandlerFunc{
 			"ALL":    make(map[string]RouteHandlerFunc),
@@ -39,32 +49,17 @@ func New(conf config.Config) *Enliven {
 			"POST":   make(map[string]RouteHandlerFunc),
 			"PUT":    make(map[string]RouteHandlerFunc),
 		},
-		Core: core.NewCore(),
 	}
-
-	enliven.SetPermissionChecker(&PermissionHandler{})
-	enliven.RegisterService("router", mux.NewRouter())
-	config.CreateConfig(config.MergeConfig(DefaultEnlivenConfig, conf))
 
 	return &enliven
 }
 
-// RegisterService registers an enliven service or dependency
-func (ev *Enliven) RegisterService(name string, service interface{}) {
+// AddService registers an enliven service or dependency
+func (ev *Enliven) AddService(name string, service interface{}) {
 	if _, ok := ev.services[name]; ok {
 		panic("The service name you are attempting to register has already been registered.")
 	}
 	ev.services[name] = service
-}
-
-// SetPermissionChecker sets the enliven permission checker.
-func (ev *Enliven) SetPermissionChecker(checker IPermissionChecker) {
-	ev.permissions = checker
-}
-
-// GetPermissionChecker returns the enliven permission checker
-func (ev *Enliven) GetPermissionChecker() IPermissionChecker {
-	return ev.permissions
 }
 
 // GetService returns an enliven service or dependency
@@ -95,12 +90,6 @@ func (ev *Enliven) AppInstalled(name string) bool {
 	return false
 }
 
-// GetRouter Gets the instance of the router
-func (ev *Enliven) GetRouter() *mux.Router {
-	router := ev.GetService("router").(*mux.Router)
-	return router
-}
-
 // AddMiddleware adds a Handler onto the middleware stack.
 // Copied w/ alterations from github.com/codegangsta/negroni
 func (ev *Enliven) AddMiddleware(handler IMiddlewareHandler) {
@@ -114,22 +103,6 @@ func (ev *Enliven) AddMiddleware(handler IMiddlewareHandler) {
 	handler.Initialize(ev)
 	ev.handlers = append(ev.handlers, handler)
 	ev.middleware = ev.buildMiddleware(ev.handlers)
-}
-
-// MiddlewareInstalled returns true if a given middleware has already been installed
-func (ev *Enliven) MiddlewareInstalled(name string) bool {
-	for _, value := range ev.installedMiddleware {
-		if name == value {
-			return true
-		}
-	}
-	return false
-}
-
-// AddMiddlewareFunc adds a HandlerFunc onto the middleware stack.
-// Copied w/ alterations from github.com/codegangsta/negroni
-func (ev *Enliven) AddMiddlewareFunc(handlerFunc func(*Context, NextHandlerFunc)) {
-	ev.AddMiddleware(HandlerFunc(handlerFunc))
 }
 
 // Copied w/ alterations from github.com/codegangsta/negroni
@@ -149,6 +122,22 @@ func (ev *Enliven) buildMiddleware(handlers []IMiddlewareHandler) Middleware {
 	}
 
 	return Middleware{handlers[0], &next}
+}
+
+// AddMiddlewareFunc adds a HandlerFunc onto the middleware stack.
+// Copied w/ alterations from github.com/codegangsta/negroni
+func (ev *Enliven) AddMiddlewareFunc(handlerFunc func(*Context, NextHandlerFunc)) {
+	ev.AddMiddleware(HandlerFunc(handlerFunc))
+}
+
+// MiddlewareInstalled returns true if a given middleware has already been installed
+func (ev *Enliven) MiddlewareInstalled(name string) bool {
+	for _, value := range ev.installedMiddleware {
+		if name == value {
+			return true
+		}
+	}
+	return false
 }
 
 // AddRoute Registers a handler for a given route.
@@ -172,18 +161,18 @@ func (ev *Enliven) AddRoute(path string, rhf func(*Context), methods ...string) 
 		}
 		// Adding a dummy reference to a handler to mux which we'll override at execution-time, methods included
 		if prefix != "" {
-			return ev.GetRouter().PathPrefix(prefix).HandlerFunc(func(http.ResponseWriter, *http.Request) {}).Methods(methods...)
+			return ev.Router.PathPrefix(prefix).HandlerFunc(func(http.ResponseWriter, *http.Request) {}).Methods(methods...)
 		}
-		return ev.GetRouter().HandleFunc(path, func(http.ResponseWriter, *http.Request) {}).Methods(methods...)
+		return ev.Router.HandleFunc(path, func(http.ResponseWriter, *http.Request) {}).Methods(methods...)
 	}
 
 	// We store a simple reference to their route handler without method expectations if none were provided
 	ev.routeHandlers["ALL"][path] = RouteHandlerFunc(rhf)
 	// Adding a dummy reference to a handler to mux which we'll override at execution-time, methods included
 	if prefix != "" {
-		return ev.GetRouter().PathPrefix(prefix).HandlerFunc(func(http.ResponseWriter, *http.Request) {})
+		return ev.Router.PathPrefix(prefix).HandlerFunc(func(http.ResponseWriter, *http.Request) {})
 	}
-	return ev.GetRouter().HandleFunc(path, func(http.ResponseWriter, *http.Request) {})
+	return ev.Router.HandleFunc(path, func(http.ResponseWriter, *http.Request) {})
 }
 
 // Copied from github.com/gorilla/mux
@@ -215,13 +204,13 @@ func routeHandlerFunc(ctx *Context, next NextHandlerFunc) {
 		return
 	}
 
-	if !ctx.Enliven.GetRouter().KeepContext {
+	if !ctx.Enliven.Router.KeepContext {
 		defer context.Clear(ctx.Request)
 	}
 
 	var match mux.RouteMatch
 	var handler http.Handler
-	if enliven.GetRouter().Match(ctx.Request, &match) {
+	if enliven.Router.Match(ctx.Request, &match) {
 		handler = match.Handler
 	}
 
@@ -255,6 +244,7 @@ func (ev *Enliven) routePrefix(ctx *Context, method string) (RouteHandlerFunc, b
 
 	for path, hf := range ctx.Enliven.routeHandlers[method] {
 		// Looking for paths that have ... on the end
+		// Example: Admin app, route.go, MountTo method
 		if len(path) < 3 || len(ctx.Request.URL.Path) < (len(path)-3) || string(path[(len(path)-3):]) != "..." {
 			continue
 		}

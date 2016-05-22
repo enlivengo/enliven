@@ -29,10 +29,9 @@ func (sa *StatikApp) Initialize(ev *enliven.Enliven) {
 		conf["assets_statik_route"] += "/"
 	}
 
-	router := ev.GetRouter()
 	statikFS, _ := fs.New()
 	handler := http.StripPrefix(conf["assets_statik_route"], http.FileServer(statikFS))
-	router.PathPrefix(conf["assets_statik_route"]).Handler(handler)
+	ev.Router.PathPrefix(conf["assets_statik_route"]).Handler(handler)
 }
 
 // GetName returns the apps's name

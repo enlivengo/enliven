@@ -49,10 +49,10 @@ func (aa *App) Initialize(ev *enliven.Enliven) {
 	}
 
 	admin.enliven = ev
-	admin.MountTo("/admin", ev.GetRouter())
+	admin.MountTo("/admin", ev.Router)
 	admin.SetSiteName("Enliven")
-	ev.GetPermissionChecker().AddPermission("admin-app", ev, "Administrator")
-	ev.RegisterService("admin", admin)
+	ev.Auth.AddPermission("admin-app", ev, "Administrator")
+	ev.AddService("admin", admin)
 }
 
 // GetName returns the app's name

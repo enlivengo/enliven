@@ -142,7 +142,7 @@ func (da *App) Initialize(ev *enliven.Enliven) {
 		panic(err)
 	}
 
-	ev.RegisterService(da.namespace+"_database", db)
+	ev.AddService(da.namespace+"_database", db)
 }
 
 // GetName gets the database app name

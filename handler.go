@@ -35,14 +35,14 @@ type RouteHandlerFunc func(*Context)
 
 // --------------------------------------------------
 
-// PermissionHandler is a stub to stand in as the default permission checker.
+// DefaultAuth is a simple implementation of IAuthorizer to stand in for auth checking/adding
 // This should be overridden by the user app or something else if permissions checking is needed.
-type PermissionHandler struct{}
+type DefaultAuth struct{}
 
 // HasPermission is the default permission checker and always returns true
-func (ph *PermissionHandler) HasPermission(permission string, ctx *Context) bool {
+func (da *DefaultAuth) HasPermission(permission string, ctx *Context) bool {
 	return true
 }
 
 // AddPermission is the default permission adder, and does nothing.
-func (ph *PermissionHandler) AddPermission(permission string, ev *Enliven, groups ...string) {}
+func (da *DefaultAuth) AddPermission(permission string, ev *Enliven, groups ...string) {}

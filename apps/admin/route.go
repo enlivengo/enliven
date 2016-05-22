@@ -343,7 +343,7 @@ func (admin *Admin) compile() {
 
 // ServeHTTP dispatches the handler registered in the matched route
 func (admin *Admin) ServeHTTP(ctx *enliven.Context) {
-	if !ctx.Enliven.GetPermissionChecker().HasPermission("admin-app", ctx) {
+	if !ctx.Enliven.Auth.HasPermission("admin-app", ctx) {
 		ctx.Forbidden()
 		return
 	}
