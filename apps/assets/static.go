@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/hickeroar/enliven"
+	"github.com/hickeroar/enliven/config"
 )
 
 // NewStaticApp Creates a new static asset app instance
@@ -16,21 +17,21 @@ type StaticApp struct{}
 
 // Initialize sets up our app to ahndle static asset requests
 func (sa *StaticApp) Initialize(ev *enliven.Enliven) {
-	var config = enliven.Config{
+	var conf = config.Config{
 		"assets_static_route": "/static/",
 		"assets_static_path":  "./static/",
 	}
 
-	config = enliven.MergeConfig(config, ev.GetConfig())
+	conf = config.UpdateConfig(config.MergeConfig(conf, config.GetConfig()))
 
 	// Making sure this route ends in a forward slash
-	if config["assets_static_route"][len(config["assets_static_route"])-1:] != "/" {
-		config["assets_static_route"] += "/"
+	if conf["assets_static_route"][len(conf["assets_static_route"])-1:] != "/" {
+		conf["assets_static_route"] += "/"
 	}
 
 	router := ev.GetRouter()
-	handler := http.StripPrefix(config["assets_static_route"], http.FileServer(http.Dir(config["assets_static_path"])))
-	router.PathPrefix(config["assets_static_route"]).Handler(handler)
+	handler := http.StripPrefix(conf["assets_static_route"], http.FileServer(http.Dir(conf["assets_static_path"])))
+	router.PathPrefix(conf["assets_static_route"]).Handler(handler)
 }
 
 // GetName returns the app's name

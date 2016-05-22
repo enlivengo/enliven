@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/hickeroar/enliven"
+	"github.com/hickeroar/enliven/config"
 	"github.com/jmcvetta/randutil"
 	"gopkg.in/redis.v3"
 )
@@ -82,20 +83,19 @@ type RedisStorageMiddleware struct {
 
 // Initialize sets up the session middleware
 func (rsm *RedisStorageMiddleware) Initialize(ev *enliven.Enliven) {
-	config := enliven.Config{
+	conf := config.Config{
 		"session_redis_address":  "127.0.0.1:6379",
 		"session_redis_password": "",
 		"session_redis_database": "0",
 	}
 
-	config = enliven.MergeConfig(config, ev.GetConfig())
-	ev.AppendConfig(config)
+	conf = config.UpdateConfig(config.MergeConfig(conf, config.GetConfig()))
 
-	database, _ := strconv.Atoi(config["session_redis_database"])
+	database, _ := strconv.Atoi(conf["session_redis_database"])
 
 	rsm.redisClient = redis.NewClient(&redis.Options{
-		Addr:     config["session_redis_address"],
-		Password: config["session_redis_password"],
+		Addr:     conf["session_redis_address"],
+		Password: conf["session_redis_password"],
 		DB:       int64(database),
 	})
 }

@@ -11,6 +11,7 @@ import (
 
 	"github.com/gorilla/context"
 	"github.com/gorilla/mux"
+	"github.com/hickeroar/enliven/config"
 	"github.com/hickeroar/enliven/templates"
 )
 
@@ -29,7 +30,7 @@ type Enliven struct {
 }
 
 // New (constructor) gets a new instance of enliven.
-func New(config Config) *Enliven {
+func New(config config.Config) *Enliven {
 	enliven = Enliven{
 		services: make(map[string]interface{}),
 		routeHandlers: map[string]map[string]RouteHandlerFunc{
@@ -50,12 +51,17 @@ func New(config Config) *Enliven {
 	return &enliven
 }
 
-// addConfig created and registers the app config
-func (ev *Enliven) registerConfig(suppliedConfig Config) {
-	var enlivenConfig = Config{
-		"server_port": "8000",
+// registerConfig creates the enliven config
+func (ev *Enliven) registerConfig(suppliedConfig config.Config) {
+	var enlivenConfig = config.Config{
+		"smtp_identity": "",
+		"smtp_username": "",
+		"smtp_password": "",
+		"smtp_host":     "",
+
+		"server_address": ":8000",
 	}
-	ev.RegisterService("config", MergeConfig(enlivenConfig, suppliedConfig))
+	config.CreateConfig(config.MergeConfig(enlivenConfig, suppliedConfig))
 }
 
 // This registers the default templates (header, footer, home, forbidden, and notfound)
@@ -121,17 +127,6 @@ func (ev *Enliven) AppInstalled(name string) bool {
 		}
 	}
 	return false
-}
-
-// AppendConfig merges and adds config to the enliven config
-func (ev *Enliven) AppendConfig(suppliedConfig Config) {
-	ev.services["config"] = MergeConfig(ev.GetConfig(), suppliedConfig)
-}
-
-// GetConfig Gets an instance of the config
-func (ev *Enliven) GetConfig() Config {
-	config := ev.GetService("config").(Config)
-	return config
 }
 
 // GetTemplates gets the template instance so devs can add to and use it
@@ -314,11 +309,13 @@ func (ev *Enliven) routePrefix(ctx *Context, method string) (RouteHandlerFunc, b
 }
 
 // Run executes the Enliven http server
-func (ev *Enliven) Run(port string) {
+func (ev *Enliven) Run() {
 	// Adding our route handler as the last piece of middleware
 	ev.AddMiddlewareFunc(routeHandlerFunc)
 
-	fmt.Println("Enliven server is listening on port " + port + ".")
-	http.ListenAndServe(":"+port, ContextHandler(ev.middleware))
+	address := config.GetConfig()["server_address"]
+
+	fmt.Println("Enliven server is listening on " + address + ".")
+	http.ListenAndServe(address, ContextHandler(ev.middleware))
 	fmt.Println("Enliven server has shut down.")
 }

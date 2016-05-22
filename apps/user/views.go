@@ -10,6 +10,7 @@ import (
 	"github.com/asaskevich/govalidator"
 	"github.com/hickeroar/enliven"
 	"github.com/hickeroar/enliven/apps/database"
+	"github.com/hickeroar/enliven/config"
 	"github.com/jmcvetta/randutil"
 )
 
@@ -30,7 +31,7 @@ func LoginPostHandler(ctx *enliven.Context) {
 	login := ctx.Request.Form.Get("username")
 	password := ctx.Request.Form.Get("password")
 
-	config := ctx.Enliven.GetConfig()
+	conf := config.GetConfig()
 	db := database.GetDatabase(ctx.Enliven)
 
 	user := User{}
@@ -50,7 +51,7 @@ func LoginPostHandler(ctx *enliven.Context) {
 	}
 
 	ctx.Session.Set("user_id", strconv.FormatUint(uint64(user.ID), 10))
-	ctx.Redirect(config["user_login_redirect"])
+	ctx.Redirect(conf["user_login_redirect"])
 }
 
 // RegisterGetHandler handles get requests to the register route
@@ -64,7 +65,7 @@ func RegisterPostHandler(ctx *enliven.Context) {
 	ctx.Request.ParseForm()
 	var errors []FormError
 	db := database.GetDatabase(ctx.Enliven)
-	config := ctx.Enliven.GetConfig()
+	conf := config.GetConfig()
 
 	// Making sure none of the required fields are empty
 	for _, field := range []string{"username", "email", "password", "verifyPassword"} {
@@ -137,6 +138,7 @@ func RegisterPostHandler(ctx *enliven.Context) {
 	}
 
 	newUser := User{
+		DisplayName:      username,
 		Username:         strings.ToLower(username),
 		Email:            email,
 		Password:         GeneratePasswordHash(password),
@@ -146,7 +148,7 @@ func RegisterPostHandler(ctx *enliven.Context) {
 	}
 
 	userGroup := Group{}
-	db.Where("Name = ?", config["user_default_group"]).First(&userGroup)
+	db.Where("Name = ?", conf["user_default_group"]).First(&userGroup)
 
 	if userGroup.ID != 0 {
 		newUser.Groups = []Group{userGroup}
@@ -168,7 +170,7 @@ func RegisterPostHandler(ctx *enliven.Context) {
 		verificationEmailer(&newUser, ctx)
 	}
 
-	ctx.Redirect(config["user_register_redirect"])
+	ctx.Redirect(conf["user_register_redirect"])
 }
 
 // ProfileGetHandler displays the profile editor
@@ -187,7 +189,7 @@ func ProfilePostHandler(ctx *enliven.Context) {
 	ctx.Request.ParseForm()
 	var errors []FormError
 	db := database.GetDatabase(ctx.Enliven)
-	config := ctx.Enliven.GetConfig()
+	conf := config.GetConfig()
 	u := GetUser(ctx)
 
 	// Making sure none of the required fields are empty
@@ -270,11 +272,11 @@ func ProfilePostHandler(ctx *enliven.Context) {
 	}
 
 	db.Save(u)
-	ctx.Redirect(config["user_profile_redirect"])
+	ctx.Redirect(conf["user_profile_redirect"])
 }
 
 // LogoutHandler logs a user out and redirects them to the configured page.
 func LogoutHandler(ctx *enliven.Context) {
 	ctx.Session.Destroy()
-	ctx.Redirect(ctx.Enliven.GetConfig()["user_logout_redirect"])
+	ctx.Redirect(config.GetConfig()["user_logout_redirect"])
 }

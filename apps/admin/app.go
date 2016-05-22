@@ -51,7 +51,7 @@ func (aa *App) Initialize(ev *enliven.Enliven) {
 	admin.enliven = ev
 	admin.MountTo("/admin", ev.GetRouter())
 	admin.SetSiteName("Enliven")
-	ev.GetPermissionChecker().AddPermission("admin-app", ev)
+	ev.GetPermissionChecker().AddPermission("admin-app", ev, "Administrator")
 	ev.RegisterService("admin", admin)
 }
 

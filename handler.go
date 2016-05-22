@@ -45,4 +45,4 @@ func (ph *PermissionHandler) HasPermission(permission string, ctx *Context) bool
 }
 
 // AddPermission is the default permission adder, and does nothing.
-func (ph *PermissionHandler) AddPermission(permission string, ev *Enliven) {}
+func (ph *PermissionHandler) AddPermission(permission string, ev *Enliven, groups ...string) {}

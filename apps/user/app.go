@@ -6,6 +6,7 @@ import (
 	"github.com/hickeroar/enliven"
 	"github.com/hickeroar/enliven/apps/admin"
 	"github.com/hickeroar/enliven/apps/database"
+	"github.com/hickeroar/enliven/config"
 	"github.com/jinzhu/gorm"
 )
 
@@ -121,7 +122,7 @@ func (ua *App) Initialize(ev *enliven.Enliven) {
 		panic("The User app requires that the Database app is initialized with a default connection.")
 	}
 
-	var config = enliven.Config{
+	var conf = config.Config{
 		"user_login_route":    "/user/login/",
 		"user_logout_route":   "/user/logout/",
 		"user_register_route": "/user/register/",
@@ -140,8 +141,7 @@ func (ua *App) Initialize(ev *enliven.Enliven) {
 		"user_default_group": "Member",
 	}
 
-	config = enliven.MergeConfig(config, ev.GetConfig())
-	ev.AppendConfig(config)
+	conf = config.UpdateConfig(config.MergeConfig(conf, config.GetConfig()))
 
 	db := database.GetDatabase(ev)
 
@@ -150,13 +150,13 @@ func (ua *App) Initialize(ev *enliven.Enliven) {
 	ua.initDefaultUserModels(db)
 
 	// Routing setup
-	ev.AddRoute(config["user_login_route"], LoginGetHandler, "GET")
-	ev.AddRoute(config["user_login_route"], LoginPostHandler, "POST")
-	ev.AddRoute(config["user_register_route"], RegisterGetHandler, "GET")
-	ev.AddRoute(config["user_register_route"], RegisterPostHandler, "POST")
-	ev.AddRoute(config["user_profile_route"], ProfileGetHandler, "GET")
-	ev.AddRoute(config["user_profile_route"], ProfilePostHandler, "POST")
-	ev.AddRoute(config["user_logout_route"], LogoutHandler)
+	ev.AddRoute(conf["user_login_route"], LoginGetHandler, "GET")
+	ev.AddRoute(conf["user_login_route"], LoginPostHandler, "POST")
+	ev.AddRoute(conf["user_register_route"], RegisterGetHandler, "GET")
+	ev.AddRoute(conf["user_register_route"], RegisterPostHandler, "POST")
+	ev.AddRoute(conf["user_profile_route"], ProfileGetHandler, "GET")
+	ev.AddRoute(conf["user_profile_route"], ProfilePostHandler, "POST")
+	ev.AddRoute(conf["user_logout_route"], LogoutHandler)
 
 	// Handles the setup of context variables to support user session management
 	ev.AddMiddlewareFunc(SessionMiddleware)
@@ -217,22 +217,37 @@ func (ua *App) HasPermission(permission string, ctx *enliven.Context) bool {
 }
 
 // AddPermission adds a new permission to the user table if it doesn't exist
-func (ua *App) AddPermission(permission string, ev *enliven.Enliven) {
+func (ua *App) AddPermission(permission string, ev *enliven.Enliven, groups ...string) {
 	db := database.GetDatabase(ev)
 
 	perm := Permission{}
 	db.Where(&Permission{Name: permission}).First(&perm)
 
 	if perm.ID == 0 {
-		db.Create(&Permission{Name: permission})
+		newPerm := Permission{
+			Name: permission,
+		}
+		db.Create(&newPerm)
+
+		// Adding this new permission to any specified groups.
+		for _, groupName := range groups {
+			group := Group{}
+			db.Where("Name = ?", groupName).First(&group)
+
+			if group.ID != 0 {
+				group.Permissions = append(group.Permissions, newPerm)
+			}
+
+			db.Save(group)
+		}
 	}
 }
 
 // getTemplate looks up a template in config or embedded assets and returns its contents
 func getTemplate(ev *enliven.Enliven, templateType string) string {
-	config := ev.GetConfig()
+	conf := config.GetConfig()
 
-	requestedTemplate := config["user_"+templateType+"_template"]
+	requestedTemplate := conf["user_"+templateType+"_template"]
 
 	if requestedTemplate == "" {
 		temp, _ := Asset("templates/" + templateType + ".html")

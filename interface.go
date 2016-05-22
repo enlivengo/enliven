@@ -27,5 +27,6 @@ type IMiddlewareHandler interface {
 // IPermissionChecker is an interface to be used when writing a struct for checking a permission
 type IPermissionChecker interface {
 	HasPermission(string, *Context) bool
-	AddPermission(string, *Enliven)
+	// Name of the new permission, the enliven instance, groups that we want to add permission to
+	AddPermission(string, *Enliven, ...string)
 }

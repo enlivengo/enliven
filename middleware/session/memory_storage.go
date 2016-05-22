@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/hickeroar/enliven"
+	"github.com/hickeroar/enliven/config"
 	"github.com/jmcvetta/randutil"
 )
 
@@ -91,16 +92,15 @@ type MemoryStorageMiddleware struct {
 func (msm *MemoryStorageMiddleware) Initialize(ev *enliven.Enliven) {
 	sessions = make(map[string]*StoredSession)
 
-	config := enliven.Config{
+	conf := config.Config{
 		"session_memory_ttl":      "86400",
 		"session_memory_purgettl": "1800",
 	}
 
-	config = enliven.MergeConfig(config, ev.GetConfig())
-	ev.AppendConfig(config)
+	conf = config.UpdateConfig(config.MergeConfig(conf, config.GetConfig()))
 
-	purgeGap, _ := strconv.Atoi(config["session_memory_purgettl"])
-	sessionTTL, _ := strconv.Atoi(config["session_memory_ttl"])
+	purgeGap, _ := strconv.Atoi(conf["session_memory_purgettl"])
+	sessionTTL, _ := strconv.Atoi(conf["session_memory_ttl"])
 
 	msm.lastPurge = int32(time.Now().Unix())
 	msm.purgeTTL = int32(purgeGap)
