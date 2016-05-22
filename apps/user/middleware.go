@@ -8,10 +8,6 @@ import (
 
 // SessionMiddleware handles adding the elements to the context that carry the user's id and status
 func SessionMiddleware(ctx *enliven.Context, next enliven.NextHandlerFunc) {
-	if ctx.Session == nil {
-		panic("The User app requires Session middleware to be registered.")
-	}
-
 	userID := ctx.Session.Get("user_id")
 
 	// If there isn't a user id in the session, we set context items accordingly

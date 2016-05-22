@@ -20,6 +20,14 @@ func (h HandlerFunc) ServeHTTP(ctx *Context, next NextHandlerFunc) {
 	h(ctx, next)
 }
 
+// Initialize initializes this function middleware by doing nothing
+func (h HandlerFunc) Initialize(ev *Enliven) {}
+
+// GetName returns an empty string for this function middleware
+func (h HandlerFunc) GetName() string {
+	return ""
+}
+
 // --------------------------------------------------
 
 // RouteHandlerFunc is an interface to be used when writing route handler functions

@@ -90,14 +90,29 @@ func (fs *fileSession) Path() string {
 }
 
 // NewFileStorageMiddleware generates an instance of FileStorageMiddleware
-func NewFileStorageMiddleware(suppliedConfig enliven.Config) *FileStorageMiddleware {
-	var config = enliven.Config{
+func NewFileStorageMiddleware() *FileStorageMiddleware {
+	return &FileStorageMiddleware{}
+}
+
+// FileStorageMiddleware manages sessions, using the filesystem as the session storage mechanism
+type FileStorageMiddleware struct {
+	path      string
+	lastPurge int32
+	purgeTTL  int32
+	ttl       int32
+	purging   bool
+}
+
+// Initialize sets up the session middleware
+func (fsm *FileStorageMiddleware) Initialize(ev *enliven.Enliven) {
+	config := enliven.Config{
 		"session_file_path":     "/tmp/",
 		"session_file_ttl":      "86400",
 		"session_file_purgettl": "1800",
 	}
 
-	config = enliven.MergeConfig(config, suppliedConfig)
+	config = enliven.MergeConfig(config, ev.GetConfig())
+	ev.AppendConfig(config)
 
 	dir := config["session_file_path"]
 
@@ -108,22 +123,16 @@ func NewFileStorageMiddleware(suppliedConfig enliven.Config) *FileStorageMiddlew
 	purgeGap, _ := strconv.Atoi(config["session_file_purgettl"])
 	sessionTTL, _ := strconv.Atoi(config["session_file_ttl"])
 
-	return &FileStorageMiddleware{
-		path:      dir,
-		lastPurge: int32(time.Now().Unix()),
-		purgeTTL:  int32(purgeGap),
-		ttl:       int32(sessionTTL),
-		purging:   false,
-	}
+	fsm.path = dir
+	fsm.lastPurge = int32(time.Now().Unix())
+	fsm.purgeTTL = int32(purgeGap)
+	fsm.ttl = int32(sessionTTL)
+	fsm.purging = false
 }
 
-// FileStorageMiddleware manages sessions, using the filesystem as the session storage mechanism
-type FileStorageMiddleware struct {
-	path      string
-	lastPurge int32
-	purgeTTL  int32
-	ttl       int32
-	purging   bool
+// GetName returns the middleware's name
+func (fsm *FileStorageMiddleware) GetName() string {
+	return "session"
 }
 
 func (fsm *FileStorageMiddleware) ServeHTTP(ctx *enliven.Context, next enliven.NextHandlerFunc) {

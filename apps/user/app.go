@@ -114,6 +114,9 @@ type App struct{}
 
 // Initialize sets up our app to handle embedded static asset requests
 func (ua *App) Initialize(ev *enliven.Enliven) {
+	if !ev.MiddlewareInstalled("session") {
+		panic("The User app requires Session middleware to be registered.")
+	}
 	if !ev.AppInstalled("default_database") {
 		panic("The User app requires that the Database app is initialized with a default connection.")
 	}

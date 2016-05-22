@@ -19,6 +19,8 @@ type ISession interface {
 // IMiddlewareHandler is an interface to be used when writing Middleware
 // Copied w/ alterations from github.com/codegangsta/negroni
 type IMiddlewareHandler interface {
+	Initialize(*Enliven)
+	GetName() string
 	ServeHTTP(*Context, NextHandlerFunc)
 }
 

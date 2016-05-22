@@ -19,12 +19,13 @@ var enliven Enliven
 
 // Enliven is....Enliven
 type Enliven struct {
-	services      map[string]interface{}
-	routeHandlers map[string]map[string]RouteHandlerFunc
-	middleware    Middleware
-	handlers      []IMiddlewareHandler
-	apps          []string
-	permissions   IPermissionChecker
+	services            map[string]interface{}
+	routeHandlers       map[string]map[string]RouteHandlerFunc
+	middleware          Middleware
+	handlers            []IMiddlewareHandler
+	installedApps       []string
+	installedMiddleware []string
+	permissions         IPermissionChecker
 }
 
 // New (constructor) gets a new instance of enliven.
@@ -109,12 +110,12 @@ func (ev *Enliven) AddApp(app IApp) {
 	}
 
 	app.Initialize(ev)
-	ev.apps = append(ev.apps, app.GetName())
+	ev.installedApps = append(ev.installedApps, app.GetName())
 }
 
 // AppInstalled returns true if a given app has already been installed
 func (ev *Enliven) AppInstalled(name string) bool {
-	for _, value := range ev.apps {
+	for _, value := range ev.installedApps {
 		if name == value {
 			return true
 		}
@@ -148,8 +149,26 @@ func (ev *Enliven) GetRouter() *mux.Router {
 // AddMiddleware adds a Handler onto the middleware stack.
 // Copied w/ alterations from github.com/codegangsta/negroni
 func (ev *Enliven) AddMiddleware(handler IMiddlewareHandler) {
+	// We track middleware names that are not empty
+	if handler.GetName() != "" && ev.MiddlewareInstalled(handler.GetName()) {
+		panic("The '" + handler.GetName() + "' middleware has already been added.")
+	} else if handler.GetName() != "" {
+		ev.installedMiddleware = append(ev.installedApps, handler.GetName())
+	}
+
+	handler.Initialize(ev)
 	ev.handlers = append(ev.handlers, handler)
 	ev.middleware = ev.buildMiddleware(ev.handlers)
+}
+
+// MiddlewareInstalled returns true if a given middleware has already been installed
+func (ev *Enliven) MiddlewareInstalled(name string) bool {
+	for _, value := range ev.installedMiddleware {
+		if name == value {
+			return true
+		}
+	}
+	return false
 }
 
 // AddMiddlewareFunc adds a HandlerFunc onto the middleware stack.

@@ -1,8 +1,6 @@
 package session
 
 import (
-	"encoding/base64"
-	"math/rand"
 	"net/http"
 	"strconv"
 	"time"
@@ -73,24 +71,8 @@ func (rs *redisSession) SessionID() string {
 }
 
 // NewRedisStorageMiddleware generates an instance of RedisStorageMiddleware
-func NewRedisStorageMiddleware(suppliedConfig enliven.Config) *RedisStorageMiddleware {
-	var config = enliven.Config{
-		"session_redis_address":  "127.0.0.1:6379",
-		"session_redis_password": "",
-		"session_redis_database": "0",
-	}
-
-	config = enliven.MergeConfig(config, suppliedConfig)
-
-	database, _ := strconv.Atoi(config["session_redis_database"])
-
-	return &RedisStorageMiddleware{
-		redisClient: redis.NewClient(&redis.Options{
-			Addr:     config["session_redis_address"],
-			Password: config["session_redis_password"],
-			DB:       int64(database),
-		}),
-	}
+func NewRedisStorageMiddleware() *RedisStorageMiddleware {
+	return &RedisStorageMiddleware{}
 }
 
 // RedisStorageMiddleware manages sessions, using redis as the session storage mechanism
@@ -98,11 +80,29 @@ type RedisStorageMiddleware struct {
 	redisClient *redis.Client
 }
 
-// generateSessionID produces a unique session id that we can store on the user's end as a cookie.
-func (rsm *RedisStorageMiddleware) generateSessionID() string {
-	rb := make([]byte, 32)
-	rand.Read(rb)
-	return base64.URLEncoding.EncodeToString(rb)
+// Initialize sets up the session middleware
+func (rsm *RedisStorageMiddleware) Initialize(ev *enliven.Enliven) {
+	config := enliven.Config{
+		"session_redis_address":  "127.0.0.1:6379",
+		"session_redis_password": "",
+		"session_redis_database": "0",
+	}
+
+	config = enliven.MergeConfig(config, ev.GetConfig())
+	ev.AppendConfig(config)
+
+	database, _ := strconv.Atoi(config["session_redis_database"])
+
+	rsm.redisClient = redis.NewClient(&redis.Options{
+		Addr:     config["session_redis_address"],
+		Password: config["session_redis_password"],
+		DB:       int64(database),
+	})
+}
+
+// GetName returns the middleware's name
+func (rsm *RedisStorageMiddleware) GetName() string {
+	return "session"
 }
 
 func (rsm *RedisStorageMiddleware) ServeHTTP(ctx *enliven.Context, next enliven.NextHandlerFunc) {

@@ -75,25 +75,8 @@ func (ms *memorySession) SessionID() string {
 }
 
 // NewMemoryStorageMiddleware generates an instance of MemoryStorageMiddleware
-func NewMemoryStorageMiddleware(suppliedConfig enliven.Config) *MemoryStorageMiddleware {
-	sessions = make(map[string]*StoredSession)
-
-	var config = enliven.Config{
-		"session_memory_ttl":      "86400",
-		"session_memory_purgettl": "1800",
-	}
-
-	config = enliven.MergeConfig(config, suppliedConfig)
-
-	purgeGap, _ := strconv.Atoi(config["session_memory_purgettl"])
-	sessionTTL, _ := strconv.Atoi(config["session_memory_ttl"])
-
-	return &MemoryStorageMiddleware{
-		lastPurge: int32(time.Now().Unix()),
-		purgeTTL:  int32(purgeGap),
-		ttl:       int32(sessionTTL),
-		purging:   false,
-	}
+func NewMemoryStorageMiddleware() *MemoryStorageMiddleware {
+	return &MemoryStorageMiddleware{}
 }
 
 // MemoryStorageMiddleware manages sessions, using memory as the session storage mechanism
@@ -102,6 +85,32 @@ type MemoryStorageMiddleware struct {
 	purgeTTL  int32
 	ttl       int32
 	purging   bool
+}
+
+// Initialize sets up the session middleware
+func (msm *MemoryStorageMiddleware) Initialize(ev *enliven.Enliven) {
+	sessions = make(map[string]*StoredSession)
+
+	config := enliven.Config{
+		"session_memory_ttl":      "86400",
+		"session_memory_purgettl": "1800",
+	}
+
+	config = enliven.MergeConfig(config, ev.GetConfig())
+	ev.AppendConfig(config)
+
+	purgeGap, _ := strconv.Atoi(config["session_memory_purgettl"])
+	sessionTTL, _ := strconv.Atoi(config["session_memory_ttl"])
+
+	msm.lastPurge = int32(time.Now().Unix())
+	msm.purgeTTL = int32(purgeGap)
+	msm.ttl = int32(sessionTTL)
+	msm.purging = false
+}
+
+// GetName returns the middleware's name
+func (msm *MemoryStorageMiddleware) GetName() string {
+	return "session"
 }
 
 func (msm *MemoryStorageMiddleware) ServeHTTP(ctx *enliven.Context, next enliven.NextHandlerFunc) {
