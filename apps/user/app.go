@@ -55,10 +55,10 @@ type User struct {
 	gorm.Model
 
 	DisplayName      string
-	Login            string  `gorm:"type:varchar(100);unique_index;"`
+	Username         string  `gorm:"type:varchar(100);unique_index;"`
 	Email            string  `gorm:"type:varchar(100);unique_index;"`
 	Password         string  `gorm:"type:varchar(100);"`
-	VerificationCode string  `gorm:"type:varchar(100);unique_index;"`
+	VerificationCode string  `gorm:"type:varchar(64);"`
 	Status           int     `gorm:"default:0;"`
 	Groups           []Group `gorm:"many2many:user_group;"`
 	Superuser        bool    `gorm:"index"`
@@ -79,6 +79,14 @@ func (u *User) UserHasPermission(name string) bool {
 	}
 
 	return false
+}
+
+// GetDisplayName gets the proper display name for a user.
+func (u *User) GetDisplayName() string {
+	if u.DisplayName != "" {
+		return u.DisplayName
+	}
+	return u.Username
 }
 
 // Group describes the user group database structure
@@ -116,20 +124,17 @@ func (ua *App) Initialize(ev *enliven.Enliven) {
 		"user_register_route": "/user/register/",
 		"user_verify_route":   "/user/verify/",
 		"user_password_route": "/user/password/",
+		"user_profile_route":  "/user/profile/",
 
-		// Full text template text
-		"user_login_template":    "",
-		"user_logout_template":   "",
-		"user_register_template": "",
-		"user_verify_template":   "",
-		"user_password_template": "",
-
-		// Where the user will be redirected after these successful actions_
+		// Where the user will be redirected after these successful actions
 		"user_login_redirect":    "/",
 		"user_logout_redirect":   "/",
-		"user_register_redirect": "/",
-		"user_password_redirect": "/",
+		"user_register_redirect": "/user/login/",
 		"user_verify_redirect":   "/",
+		"user_password_redirect": "/",
+		"user_profile_redirect":  "/user/profile/",
+
+		"user_default_group": "Member",
 	}
 
 	config = enliven.MergeConfig(config, ev.GetConfig())
@@ -144,13 +149,17 @@ func (ua *App) Initialize(ev *enliven.Enliven) {
 	// Routing setup
 	ev.AddRoute(config["user_login_route"], LoginGetHandler, "GET")
 	ev.AddRoute(config["user_login_route"], LoginPostHandler, "POST")
+	ev.AddRoute(config["user_register_route"], RegisterGetHandler, "GET")
+	ev.AddRoute(config["user_register_route"], RegisterPostHandler, "POST")
+	ev.AddRoute(config["user_profile_route"], ProfileGetHandler, "GET")
+	ev.AddRoute(config["user_profile_route"], ProfilePostHandler, "POST")
 	ev.AddRoute(config["user_logout_route"], LogoutHandler)
 
 	// Handles the setup of context variables to support user session management
 	ev.AddMiddlewareFunc(SessionMiddleware)
 
 	templates := ev.GetTemplates()
-	for _, t := range []string{"login", "password", "register", "verify"} {
+	for _, t := range []string{"login", "password", "register", "verify", "profile"} {
 		templates.Parse(getTemplate(ev, t))
 	}
 
@@ -179,7 +188,7 @@ func (ua *App) initDefaultUserModels(db *gorm.DB) {
 
 	user = User{
 		DisplayName:      "Administrator",
-		Login:            "admin",
+		Username:         "admin",
 		Email:            "admin@admin.admin",
 		Password:         GeneratePasswordHash("admin"),
 		VerificationCode: "",

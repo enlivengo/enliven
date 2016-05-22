@@ -1,4 +1,4 @@
-{{define "user_register"}}
+{{define "user_profile"}}
 {{template "header" .}}
 
 <style type="text/css">
@@ -47,13 +47,18 @@
 <form method="POST">
 
     <div class="form-field">
+        <label for="username">Display Name:</label>
+        <input id="displayName" name="displayName" type="text" value="{{.Storage.User.DisplayName}}" />
+    </div>
+
+    <div class="form-field">
         <label for="username">Username:</label>
-        <input id="username" name="username" type="text" value="{{.Strings.RegisterUsername}}" />
+        <input id="username" name="username" type="text" value="{{.Storage.User.Username}}" />
     </div>
 
     <div class="form-field">
         <label for="email">Email:</label>
-        <input id="email" name="email" type="text" value="{{.Strings.RegisterEmail}}" />
+        <input id="email" name="email" type="text" value="{{.Storage.User.Email}}" />
     </div>
 
     <div class="form-field">
