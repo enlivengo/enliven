@@ -1,9 +1,22 @@
 package core
 
+import (
+	"html/template"
+
+	"github.com/hickeroar/enliven/core/email"
+	"github.com/hickeroar/enliven/core/templates"
+)
+
+// Core holds core functionality for enliven that exists outside the enliven namespace
 type Core struct {
-	//Email       *EmailContrib
+	Email     email.Core
+	Templates *template.Template
 }
 
-func NewCore() *EnlivenCore {
-	return &EnlivenCore{}
+// NewCore creates a new core struct instance for use in the enliven application
+func NewCore() Core {
+	return Core{
+		Email:     email.Core{},
+		Templates: templates.New(),
+	}
 }

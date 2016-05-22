@@ -41,7 +41,7 @@ func (ctx *Context) AnonymousTemplate(tmpl *template.Template) {
 // Template sets up HTML headers and outputs an html/template response for a specific template definition
 func (ctx *Context) Template(templateName string) {
 	ctx.Response.Header().Set("Content-Type", "text/html")
-	err := ctx.Enliven.GetTemplates().ExecuteTemplate(ctx.Response, templateName, ctx)
+	err := ctx.Enliven.Core.Templates.ExecuteTemplate(ctx.Response, templateName, ctx)
 	if err != nil {
 		ctx.String(err.Error())
 	}

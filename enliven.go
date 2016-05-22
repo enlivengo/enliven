@@ -1,10 +1,7 @@
 package enliven
 
-//go:generate go-bindata -o templates/templates.go -pkg templates templates/...
-
 import (
 	"fmt"
-	"html/template"
 	"net/http"
 	"path"
 	"strings"
@@ -12,7 +9,7 @@ import (
 	"github.com/gorilla/context"
 	"github.com/gorilla/mux"
 	"github.com/hickeroar/enliven/config"
-	"github.com/hickeroar/enliven/templates"
+	"github.com/hickeroar/enliven/core"
 )
 
 // We'll use this to create and insert the initial enliven instance into the handlers
@@ -27,10 +24,11 @@ type Enliven struct {
 	installedApps       []string
 	installedMiddleware []string
 	permissions         IPermissionChecker
+	Core                core.Core
 }
 
 // New (constructor) gets a new instance of enliven.
-func New(config config.Config) *Enliven {
+func New(conf config.Config) *Enliven {
 	enliven = Enliven{
 		services: make(map[string]interface{}),
 		routeHandlers: map[string]map[string]RouteHandlerFunc{
@@ -41,46 +39,14 @@ func New(config config.Config) *Enliven {
 			"POST":   make(map[string]RouteHandlerFunc),
 			"PUT":    make(map[string]RouteHandlerFunc),
 		},
+		Core: core.NewCore(),
 	}
 
 	enliven.SetPermissionChecker(&PermissionHandler{})
 	enliven.RegisterService("router", mux.NewRouter())
-	enliven.registerConfig(config)
-	enliven.registerTemplates()
+	config.CreateConfig(config.MergeConfig(DefaultEnlivenConfig, conf))
 
 	return &enliven
-}
-
-// registerConfig creates the enliven config
-func (ev *Enliven) registerConfig(suppliedConfig config.Config) {
-	var enlivenConfig = config.Config{
-		"smtp_identity": "",
-		"smtp_username": "",
-		"smtp_password": "",
-		"smtp_host":     "",
-
-		"server_address": ":8000",
-	}
-	config.CreateConfig(config.MergeConfig(enlivenConfig, suppliedConfig))
-}
-
-// This registers the default templates (header, footer, home, forbidden, and notfound)
-// It's expected that developers will override at least the header, footer, and home templates.
-func (ev *Enliven) registerTemplates() {
-	headerTemplate, _ := templates.Asset("templates/header.html")
-	footerTemplate, _ := templates.Asset("templates/footer.html")
-	homeTemplate, _ := templates.Asset("templates/home.html")
-	forbiddenTemplate, _ := templates.Asset("templates/forbidden.html")
-	notfoundTemplate, _ := templates.Asset("templates/notfound.html")
-
-	templates := template.New("enliven")
-	templates.Parse(string(headerTemplate[:]))
-	templates.Parse(string(footerTemplate[:]))
-	templates.Parse(string(homeTemplate[:]))
-	templates.Parse(string(forbiddenTemplate[:]))
-	templates.Parse(string(notfoundTemplate[:]))
-
-	ev.RegisterService("templates", templates)
 }
 
 // RegisterService registers an enliven service or dependency
@@ -127,12 +93,6 @@ func (ev *Enliven) AppInstalled(name string) bool {
 		}
 	}
 	return false
-}
-
-// GetTemplates gets the template instance so devs can add to and use it
-func (ev *Enliven) GetTemplates() *template.Template {
-	templates := ev.GetService("templates").(*template.Template)
-	return templates
 }
 
 // GetRouter Gets the instance of the router

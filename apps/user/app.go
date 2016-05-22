@@ -161,9 +161,8 @@ func (ua *App) Initialize(ev *enliven.Enliven) {
 	// Handles the setup of context variables to support user session management
 	ev.AddMiddlewareFunc(SessionMiddleware)
 
-	templates := ev.GetTemplates()
-	for _, t := range []string{"login", "password", "register", "verify", "profile"} {
-		templates.Parse(getTemplate(ev, t))
+	for _, templateType := range []string{"login", "password", "register", "verify", "profile"} {
+		ev.Core.Templates.Parse(getTemplate(templateType))
 	}
 
 	admin.AddResources(&User{}, &Group{}, &Permission{})
@@ -244,7 +243,7 @@ func (ua *App) AddPermission(permission string, ev *enliven.Enliven, groups ...s
 }
 
 // getTemplate looks up a template in config or embedded assets and returns its contents
-func getTemplate(ev *enliven.Enliven, templateType string) string {
+func getTemplate(templateType string) string {
 	conf := config.GetConfig()
 
 	requestedTemplate := conf["user_"+templateType+"_template"]
