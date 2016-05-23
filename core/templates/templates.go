@@ -3,7 +3,7 @@ package templates
 import (
 	"html/template"
 
-	"github.com/hickeroar/enliven/core/templates/files"
+	"github.com/enlivengo/enliven/core/templates/files"
 )
 
 //go:generate go-bindata -o files/files.go -pkg files files/...

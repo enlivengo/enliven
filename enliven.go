@@ -6,10 +6,10 @@ import (
 	"path"
 	"strings"
 
+	"github.com/enlivengo/enliven/config"
+	"github.com/enlivengo/enliven/core"
 	"github.com/gorilla/context"
 	"github.com/gorilla/mux"
-	"github.com/hickeroar/enliven/config"
-	"github.com/hickeroar/enliven/core"
 )
 
 // Our instance of enliven that will be set up in request contexts

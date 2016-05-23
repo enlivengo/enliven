@@ -10,9 +10,9 @@ import (
 	"strings"
 
 	"github.com/asaskevich/govalidator"
-	"github.com/hickeroar/enliven"
-	"github.com/hickeroar/enliven/apps/database"
-	"github.com/hickeroar/enliven/config"
+	"github.com/enlivengo/enliven"
+	"github.com/enlivengo/enliven/apps/database"
+	"github.com/enlivengo/enliven/config"
 	"github.com/jmcvetta/randutil"
 )
 

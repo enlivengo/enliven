@@ -3,7 +3,7 @@ package user
 import (
 	"strconv"
 
-	"github.com/hickeroar/enliven"
+	"github.com/enlivengo/enliven"
 )
 
 // SessionMiddleware handles adding the elements to the context that carry the user's id and status

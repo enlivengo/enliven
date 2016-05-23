@@ -3,8 +3,8 @@ package assets
 import (
 	"net/http"
 
-	"github.com/hickeroar/enliven"
-	"github.com/hickeroar/enliven/config"
+	"github.com/enlivengo/enliven"
+	"github.com/enlivengo/enliven/config"
 )
 
 // NewStaticApp Creates a new static asset app instance

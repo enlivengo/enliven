@@ -3,10 +3,10 @@ package user
 import (
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/hickeroar/enliven"
-	"github.com/hickeroar/enliven/apps/admin"
-	"github.com/hickeroar/enliven/apps/database"
-	"github.com/hickeroar/enliven/config"
+	"github.com/enlivengo/admin"
+	"github.com/enlivengo/enliven"
+	"github.com/enlivengo/enliven/apps/database"
+	"github.com/enlivengo/enliven/config"
 	"github.com/jinzhu/gorm"
 )
 

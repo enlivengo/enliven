@@ -8,8 +8,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/hickeroar/enliven"
-	"github.com/hickeroar/enliven/config"
+	"github.com/enlivengo/enliven"
+	"github.com/enlivengo/enliven/config"
 	"github.com/jmcvetta/randutil"
 )
 

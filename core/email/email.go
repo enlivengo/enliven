@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/smtp"
 
-	"github.com/hickeroar/enliven/config"
+	"github.com/enlivengo/enliven/config"
 )
 
 // Core is the core functionality for sending emails.

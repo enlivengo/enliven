@@ -20,7 +20,7 @@
             {
                 "match": ".html",
                 "isAsync": false,
-                "cmd": "cd ${workspaceRoot} && rm -f ./core/templates/files/files.go ./apps/admin/templates.go ./apps/user/templates.go"
+                "cmd": "cd ${workspaceRoot} && rm -f ./core/templates/files/files.go ./apps/user/templates.go"
             },
             {
                 "match": ".html",
@@ -36,7 +36,7 @@
             {
                 "match": ".tmpl",
                 "isAsync": false,
-                "cmd": "cd ${workspaceRoot} && rm -f ./core/templates/files/files.go ./apps/admin/templates.go ./apps/user/templates.go"
+                "cmd": "cd ${workspaceRoot} && rm -f ./core/templates/files/files.go ./apps/user/templates.go"
             },
             {
                 "match": ".tmpl",
@@ -52,13 +52,13 @@
             {
                 "match": ".css",
                 "isAsync": false,
-                "cmd": "cd ${workspaceRoot} && rm -f ./core/templates/files/files.go ./apps/admin/templates.go ./apps/user/templates.go"
+                "cmd": "cd ${workspaceRoot} && rm -f ./core/templates/files/files.go ./apps/user/templates.go"
             },
             {
                 "match": ".css",
                 "isAsync": false,
                 "cmd": "cd ${workspaceRoot} && go generate ./..."
-            },
+            }
         ]
     }
 }

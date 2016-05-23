@@ -3,8 +3,8 @@ package database
 import (
 	"strings"
 
-	"github.com/hickeroar/enliven"
-	"github.com/hickeroar/enliven/config"
+	"github.com/enlivengo/enliven"
+	"github.com/enlivengo/enliven/config"
 	"github.com/jinzhu/gorm"
 
 	// Adding DB requirements.

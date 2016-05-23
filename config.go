@@ -1,6 +1,6 @@
 package enliven
 
-import "github.com/hickeroar/enliven/config"
+import "github.com/enlivengo/enliven/config"
 
 // DefaultEnlivenConfig represents the default config for enliven
 var DefaultEnlivenConfig = config.Config{
