@@ -126,7 +126,7 @@ func (ua *App) Initialize(ev *enliven.Enliven) {
 		"user_login_route":    "/user/login/",
 		"user_logout_route":   "/user/logout/",
 		"user_register_route": "/user/register/",
-		"user_verify_route":   "/user/verify/",
+		"user_verify_route":   "/user/verify/{code}/",
 		"user_password_route": "/user/password/",
 		"user_profile_route":  "/user/profile/",
 
@@ -138,7 +138,8 @@ func (ua *App) Initialize(ev *enliven.Enliven) {
 		"user_password_redirect": "/",
 		"user_profile_redirect":  "/user/profile/",
 
-		"user_default_group": "Member",
+		"user_default_group":        "Member",
+		"user_require_verification": "1",
 	}
 
 	conf = config.UpdateConfig(config.MergeConfig(conf, config.GetConfig()))
@@ -161,7 +162,7 @@ func (ua *App) Initialize(ev *enliven.Enliven) {
 	// Handles the setup of context variables to support user session management
 	ev.AddMiddlewareFunc(SessionMiddleware)
 
-	for _, templateType := range []string{"login", "password", "register", "verify", "profile"} {
+	for _, templateType := range []string{"login", "password", "register", "verify", "profile", "verify_email"} {
 		ev.Core.Templates.Parse(getTemplate(templateType))
 	}
 

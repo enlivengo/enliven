@@ -212,6 +212,7 @@ func routeHandlerFunc(ctx *Context, next NextHandlerFunc) {
 	var handler http.Handler
 	if enliven.Router.Match(ctx.Request, &match) {
 		handler = match.Handler
+		ctx.Vars = match.Vars
 	}
 
 	if handler == nil {

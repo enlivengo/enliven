@@ -8,6 +8,7 @@ import (
 // Context stores context variables and the session that will be passed to requests
 type Context struct {
 	Session  ISession
+	Vars     map[string]string // This map specifically to hold route key value pairs.
 	Strings  map[string]string
 	Integers map[string]int
 	Booleans map[string]bool
@@ -86,6 +87,7 @@ type CHandler func(*Context)
 // ServeHTTP is the first handler that gets hit when a request comes in.
 func (ch CHandler) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	ctx := &Context{
+		Vars:     make(map[string]string),
 		Strings:  make(map[string]string),
 		Integers: make(map[string]int),
 		Booleans: make(map[string]bool),

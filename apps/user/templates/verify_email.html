@@ -1,0 +1,10 @@
+{{define "verify_email"}}
+Hello {{.User.DisplayName}},
+
+Thank you for registering at {{.Config.site_name}}.
+
+Please verify your email address by clicking this link: {{.Config.site_url}}{{.Context.Enliven.Core.Util.StrReplace .Config.user_verify_route "{code}" .User.VerificationCode}}
+
+Thank you!
+- {{.Config.site_name}}
+{{end}}

@@ -2,6 +2,7 @@ package email
 
 import (
 	"errors"
+	"fmt"
 	"net/smtp"
 
 	"github.com/hickeroar/enliven/config"
@@ -17,14 +18,15 @@ func (c Core) New() Email {
 	}
 	conf := config.GetConfig()
 	return Email{
-		From: conf["email_default_from_address"],
+		From: conf["email_from_default"],
 	}
 }
 
 // Enabled returns whether or not we are configured for email
 func (c Core) Enabled() bool {
 	conf := config.GetConfig()
-	if conf["smtp_host"] != "" {
+	fmt.Println()
+	if conf["email_smtp_host"] != "" {
 		return true
 	}
 	return false
@@ -44,7 +46,7 @@ func (e *Email) AddRecipient(address string) {
 }
 
 // Send senss an email using smtp credentials provided in the config
-func (e *Email) Send(email *Email) error {
+func (e *Email) Send() error {
 	conf := config.GetConfig()
 
 	if e.From == "" {
@@ -54,9 +56,64 @@ func (e *Email) Send(email *Email) error {
 		return errors.New("Enliven Core Email: At least one 'To' address must be specified.")
 	}
 
+	// The smtp server may have no auth mechanism
+	if conf["email_smtp_auth"] == "none" {
+		// Opening connection to smtp server
+		smtpConn, err := smtp.Dial(conf["email_smtp_host"] + ":" + conf["email_smtp_port"])
+		if err != nil {
+			return err
+		}
+
+		// Adding from address
+		if err := smtpConn.Mail(e.From); err != nil {
+			return err
+		}
+		// Adding all recipients to the message
+		for _, recipient := range e.To {
+			if err := smtpConn.Rcpt(recipient); err != nil {
+				return err
+			}
+		}
+
+		// Writing out the message data
+		messageWriter, err := smtpConn.Data()
+		if err != nil {
+			return err
+		}
+		if _, err = fmt.Fprintf(messageWriter, "Subject: "+e.Subject+"\n\n"+e.Message+"\n"); err != nil {
+			return err
+		}
+		if err = messageWriter.Close(); err != nil {
+			return err
+		}
+
+		// Closing connection to the smtp server
+		if err = smtpConn.Quit(); err != nil {
+			return err
+		}
+
+		return nil
+	}
+
 	auth := smtp.PlainAuth(conf["email_smtp_identity"], conf["email_smtp_username"], conf["email_smtp_password"], conf["email_smtp_host"])
+	message := []byte("Subject: " + e.Subject + "\r\n\r\n" + e.Message + "\r\n")
+	err := smtp.SendMail(conf["email_smtp_host"]+":"+conf["email_smtp_port"], auth, e.From, e.To, message)
 
-	message := []byte("Subject: " + e.Subject + "\n\n" + e.Message + "\n")
+	// If we failed with encryption error, and the setting for insecurity is allowed, we insecure send it (recommended only for testing)
+	if err.Error() == "unencrypted connection" && conf["email_allow_insecure"] == "1" {
+		uAuth := unencryptedAuth{auth}
+		err = smtp.SendMail(conf["email_smtp_host"]+":"+conf["email_smtp_port"], uAuth, e.From, e.To, message)
+	}
 
-	return smtp.SendMail(conf["email_smtp_host"]+":25", auth, e.From, e.To, message)
+	return err
+}
+
+type unencryptedAuth struct {
+	smtp.Auth
+}
+
+func (a unencryptedAuth) Start(server *smtp.ServerInfo) (string, []byte, error) {
+	s := *server
+	s.TLS = true
+	return a.Auth.Start(&s)
 }

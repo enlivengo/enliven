@@ -3,7 +3,9 @@ package user
 //go:generate go-bindata -o templates.go -pkg user templates/...
 
 import (
+	"bytes"
 	"encoding/json"
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -42,7 +44,7 @@ func LoginPostHandler(ctx *enliven.Context) {
 		where = "Username = ?"
 		login = strings.ToLower(login)
 	}
-	db.Where(where, login).First(&user)
+	db.Where(where+" AND Status = ?", login, 1).First(&user)
 
 	if user.ID == 0 || !VerifyPasswordHash(user.Password, password) {
 		ctx.Strings["LoginError"] = "Invalid Login or Password."
@@ -66,6 +68,7 @@ func RegisterPostHandler(ctx *enliven.Context) {
 	var errors []FormError
 	db := database.GetDatabase(ctx.Enliven)
 	conf := config.GetConfig()
+	verifyAccount := (conf["user_require_verification"] == "1" && ctx.Enliven.Core.Email.Enabled())
 
 	// Making sure none of the required fields are empty
 	for _, field := range []string{"username", "email", "password", "verifyPassword"} {
@@ -154,11 +157,7 @@ func RegisterPostHandler(ctx *enliven.Context) {
 		newUser.Groups = []Group{userGroup}
 	}
 
-	// A developer can set a verification email function to handle sending a verification email to the user
-	// This is entirely managed by the developer and enliven just provides the framework for it.
-	verificationEmailer, hasMailer := ctx.Enliven.GetService("VerificationEmailer").(func(*User, *enliven.Context))
-
-	if hasMailer {
+	if verifyAccount {
 		verificationCode, _ := randutil.AlphaString(32)
 		newUser.VerificationCode = verificationCode
 		newUser.Status = 0
@@ -166,8 +165,26 @@ func RegisterPostHandler(ctx *enliven.Context) {
 
 	db.Create(&newUser)
 
-	if hasMailer {
-		verificationEmailer(&newUser, ctx)
+	if verifyAccount {
+		templateData := map[string]interface{}{
+			"User":    newUser,
+			"Context": ctx,
+			"Config":  conf,
+		}
+		var bMessage bytes.Buffer
+		eerr := ctx.Enliven.Core.Templates.ExecuteTemplate(&bMessage, "verify_email", templateData)
+		if eerr != nil {
+			fmt.Println(eerr.Error())
+		}
+
+		email := ctx.Enliven.Core.Email.New()
+		email.AddRecipient(newUser.Email)
+		email.Subject = conf["site_name"] + ": Please Verify Your Account"
+		email.Message = bMessage.String()
+		err := email.Send()
+		if err != nil {
+			fmt.Println(err.Error())
+		}
 	}
 
 	ctx.Redirect(conf["user_register_redirect"])

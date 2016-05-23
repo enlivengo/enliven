@@ -5,6 +5,7 @@
 // templates/profile.html
 // templates/register.html
 // templates/verify.html
+// templates/verify_email.html
 // DO NOT EDIT!
 
 package user
@@ -172,6 +173,26 @@ func templatesVerifyHtml() (*asset, error) {
 	return a, nil
 }
 
+var _templatesVerify_emailHtml = []byte("\x1f\x8b\x08\x00\x00\x09\x6e\x88\x00\xff\x6c\x8f\x41\x4e\xc4\x30\x0c\x45\xf7\x39\x85\x99\x35\xe4\x00\x6c\x07\x24\x56\x08\x01\xc3\xb6\x0a\xad\xdb\xb1\xea\x71\x90\xe3\x8e\xa8\x22\xdf\x9d\x76\x0a\x12\x42\x2c\x93\xaf\xf7\xbf\x5f\xad\x1d\xf6\x24\x08\xbb\x33\x2a\xf5\x73\x83\xa7\x44\xbc\x73\x0f\x0f\xc8\x9c\xa1\xd6\x78\x28\xa8\xf1\x8e\xca\x07\xa7\xf9\x31\x9d\xd0\xfd\x3a\x84\xd7\x63\x92\x11\xe6\x3c\x41\x9f\x15\x14\x07\x2a\xb6\x14\xc8\x00\xc9\x56\x68\x9f\xa5\xa7\x21\x16\x32\x6c\xe4\x02\xc5\x10\x9e\x18\x53\x41\xd8\x96\x56\x58\xe1\x32\x07\xa9\xeb\x14\x4b\x81\xf7\x19\x5a\xa6\x76\x5c\x7b\xec\x48\x05\x98\x64\xbc\xfd\xdb\x37\x29\xbb\x6f\x7f\x86\x9f\x16\xef\x85\xe9\x8c\xb2\xbc\x15\xe3\xc1\x88\xe3\x8b\xe9\x33\x2e\xf7\xb6\x08\x3f\xe4\xb4\x58\x34\xdf\x8e\x9a\x27\x5b\x8c\x6b\x9b\x3b\xf4\x1d\x6c\x86\x6f\x6b\x46\x6d\x32\xca\xb2\x5f\x03\xff\x65\x79\x15\x6e\xfe\xb7\x0a\xb5\xa2\x74\xee\x5f\x01\x00\x00\xff\xff\x7f\x37\x68\xbb\x48\x01\x00\x00")
+
+func templatesVerify_emailHtmlBytes() ([]byte, error) {
+	return bindataRead(
+		_templatesVerify_emailHtml,
+		"templates/verify_email.html",
+	)
+}
+
+func templatesVerify_emailHtml() (*asset, error) {
+	bytes, err := templatesVerify_emailHtmlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "templates/verify_email.html", size: 328, mode: os.FileMode(436), modTime: time.Unix(1463968443, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
 // Asset loads and returns the asset for the given name.
 // It returns an error if the asset could not be found or
 // could not be loaded.
@@ -229,6 +250,7 @@ var _bindata = map[string]func() (*asset, error){
 	"templates/profile.html": templatesProfileHtml,
 	"templates/register.html": templatesRegisterHtml,
 	"templates/verify.html": templatesVerifyHtml,
+	"templates/verify_email.html": templatesVerify_emailHtml,
 }
 
 // AssetDir returns the file names below a certain
@@ -277,6 +299,7 @@ var _bintree = &bintree{nil, map[string]*bintree{
 		"profile.html": &bintree{templatesProfileHtml, map[string]*bintree{}},
 		"register.html": &bintree{templatesRegisterHtml, map[string]*bintree{}},
 		"verify.html": &bintree{templatesVerifyHtml, map[string]*bintree{}},
+		"verify_email.html": &bintree{templatesVerify_emailHtml, map[string]*bintree{}},
 	}},
 }}
 
