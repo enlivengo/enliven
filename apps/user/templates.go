@@ -88,7 +88,7 @@ func templatesLoginHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "templates/login.html", size: 1334, mode: os.FileMode(436), modTime: time.Unix(1463887268, 0)}
+	info := bindataFileInfo{name: "templates/login.html", size: 1334, mode: os.FileMode(436), modTime: time.Unix(1464039900, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -108,7 +108,7 @@ func templatesPasswordHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "templates/password.html", size: 204, mode: os.FileMode(436), modTime: time.Unix(1463885301, 0)}
+	info := bindataFileInfo{name: "templates/password.html", size: 204, mode: os.FileMode(436), modTime: time.Unix(1464039900, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -128,7 +128,7 @@ func templatesProfileHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "templates/profile.html", size: 2164, mode: os.FileMode(436), modTime: time.Unix(1463891555, 0)}
+	info := bindataFileInfo{name: "templates/profile.html", size: 2164, mode: os.FileMode(436), modTime: time.Unix(1464039900, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -148,7 +148,7 @@ func templatesRegisterHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "templates/register.html", size: 1974, mode: os.FileMode(436), modTime: time.Unix(1463891562, 0)}
+	info := bindataFileInfo{name: "templates/register.html", size: 1974, mode: os.FileMode(436), modTime: time.Unix(1464039900, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -168,7 +168,7 @@ func templatesVerifyHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "templates/verify.html", size: 571, mode: os.FileMode(436), modTime: time.Unix(1463990161, 0)}
+	info := bindataFileInfo{name: "templates/verify.html", size: 571, mode: os.FileMode(436), modTime: time.Unix(1464039900, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -188,7 +188,7 @@ func templatesVerify_emailHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "templates/verify_email.html", size: 328, mode: os.FileMode(436), modTime: time.Unix(1463968443, 0)}
+	info := bindataFileInfo{name: "templates/verify_email.html", size: 328, mode: os.FileMode(436), modTime: time.Unix(1464039900, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
