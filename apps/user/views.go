@@ -292,6 +292,33 @@ func ProfilePostHandler(ctx *enliven.Context) {
 	ctx.Redirect(conf["user_profile_redirect"])
 }
 
+// VerifyHandler checks a user's verification code to see if it matches.
+func VerifyHandler(ctx *enliven.Context) {
+	ctx.Booleans["Verified"] = false
+
+	code, ok := ctx.Vars["code"]
+	if !ok {
+		ctx.Template("user_verify")
+		return
+	}
+
+	db := database.GetDatabase(ctx.Enliven)
+	u := User{}
+	db.Where("Verification_Code = ? AND Status = ?", code, 0).First(&u)
+
+	if u.ID == 0 {
+		ctx.Template("user_verify")
+		return
+	}
+
+	u.Status = 1
+	db.Save(&u)
+
+	ctx.Booleans["Verified"] = true
+	ctx.Strings["LoginURL"] = config.GetConfig()["user_login_route"]
+	ctx.Template("user_verify")
+}
+
 // LogoutHandler logs a user out and redirects them to the configured page.
 func LogoutHandler(ctx *enliven.Context) {
 	ctx.Session.Destroy()

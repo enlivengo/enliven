@@ -59,10 +59,10 @@ type User struct {
 	Username         string  `gorm:"type:varchar(100);unique_index;"`
 	Email            string  `gorm:"type:varchar(100);unique_index;"`
 	Password         string  `gorm:"type:varchar(100);"`
-	VerificationCode string  `gorm:"type:varchar(64);"`
+	VerificationCode string  `gorm:"type:varchar(64);index;"`
 	Status           int     `gorm:"default:0;"`
 	Groups           []Group `gorm:"many2many:user_group;"`
-	Superuser        bool    `gorm:"index"`
+	Superuser        bool    `gorm:"index;"`
 }
 
 // UserHasPermission checks if a user has a specific permission
@@ -134,7 +134,6 @@ func (ua *App) Initialize(ev *enliven.Enliven) {
 		"user_login_redirect":    "/",
 		"user_logout_redirect":   "/",
 		"user_register_redirect": "/user/login/",
-		"user_verify_redirect":   "/",
 		"user_password_redirect": "/",
 		"user_profile_redirect":  "/user/profile/",
 
@@ -157,6 +156,7 @@ func (ua *App) Initialize(ev *enliven.Enliven) {
 	ev.AddRoute(conf["user_register_route"], RegisterPostHandler, "POST")
 	ev.AddRoute(conf["user_profile_route"], ProfileGetHandler, "GET")
 	ev.AddRoute(conf["user_profile_route"], ProfilePostHandler, "POST")
+	ev.AddRoute(conf["user_verify_route"], VerifyHandler)
 	ev.AddRoute(conf["user_logout_route"], LogoutHandler)
 
 	// Handles the setup of context variables to support user session management

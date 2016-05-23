@@ -218,17 +218,20 @@ func routeHandlerFunc(ctx *Context, next NextHandlerFunc) {
 	if handler == nil {
 		ctx.NotFound()
 	} else {
+		// The routing path match.
+		urlPath, _ := match.Route.GetPathTemplate()
+
 		// We use the request path to look up our stored route handler if it exists
-		if routeHandler, ok := ctx.Enliven.routeHandlers[strings.ToUpper(ctx.Request.Method)][ctx.Request.URL.Path]; ok {
+		if routeHandler, ok := ctx.Enliven.routeHandlers[strings.ToUpper(ctx.Request.Method)][urlPath]; ok {
 			// Calling the route handle specific to a certain method if we stored one
 			routeHandler(ctx)
-		} else if routeHandler, ok := ctx.Enliven.routeHandlers["ALL"][ctx.Request.URL.Path]; ok {
+		} else if routeHandler, ok := ctx.Enliven.routeHandlers["ALL"][urlPath]; ok {
 			// Calling the route handler that handles all routes if we stored one
 			routeHandler(ctx)
-		} else if routeHandler, ok := ctx.Enliven.routePrefix(ctx, strings.ToUpper(ctx.Request.Method)); ok {
+		} else if routeHandler, ok := ctx.Enliven.routePrefix(ctx, urlPath, strings.ToUpper(ctx.Request.Method)); ok {
 			// Per-method routing for path prefixes
 			routeHandler(ctx)
-		} else if routeHandler, ok := ctx.Enliven.routePrefix(ctx, "ALL"); ok {
+		} else if routeHandler, ok := ctx.Enliven.routePrefix(ctx, urlPath, "ALL"); ok {
 			// All-method routing for path prefixes
 			routeHandler(ctx)
 		} else {
@@ -240,18 +243,18 @@ func routeHandlerFunc(ctx *Context, next NextHandlerFunc) {
 	next(ctx)
 }
 
-func (ev *Enliven) routePrefix(ctx *Context, method string) (RouteHandlerFunc, bool) {
+func (ev *Enliven) routePrefix(ctx *Context, urlPath string, method string) (RouteHandlerFunc, bool) {
 	var prefix string
 
 	for path, hf := range ctx.Enliven.routeHandlers[method] {
 		// Looking for paths that have ... on the end
 		// Example: Admin app, route.go, MountTo method
-		if len(path) < 3 || len(ctx.Request.URL.Path) < (len(path)-3) || string(path[(len(path)-3):]) != "..." {
+		if len(path) < 3 || len(urlPath) < (len(path)-3) || string(path[(len(path)-3):]) != "..." {
 			continue
 		}
 		prefix = string(path[:(len(path) - 3)])
 		// If the request path prefix is the same as the path (minus the ...)
-		if string(ctx.Request.URL.Path[:len(prefix)]) == prefix {
+		if string(urlPath[:len(prefix)]) == prefix {
 			return hf, true
 		}
 	}
