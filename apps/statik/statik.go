@@ -1,4 +1,4 @@
-package assets
+package statik
 
 import (
 	"net/http"
@@ -8,16 +8,16 @@ import (
 	"github.com/rakyll/statik/fs"
 )
 
-// NewStatikApp Creates a new embedded statik asset app
-func NewStatikApp() *StatikApp {
-	return &StatikApp{}
+// NewApp Creates a new embedded statik asset app
+func NewApp() *App {
+	return &App{}
 }
 
-// StatikApp handles adding a route handler for static assets
-type StatikApp struct{}
+// App handles adding a route handler for static assets
+type App struct{}
 
 // Initialize sets up our app to handle embedded static asset requests
-func (sa *StatikApp) Initialize(ev *enliven.Enliven) {
+func (sa *App) Initialize(ev *enliven.Enliven) {
 	var conf = config.Config{
 		"assets_statik_route": "/statik/",
 	}
@@ -35,6 +35,6 @@ func (sa *StatikApp) Initialize(ev *enliven.Enliven) {
 }
 
 // GetName returns the apps's name
-func (sa *StatikApp) GetName() string {
+func (sa *App) GetName() string {
 	return "statik"
 }

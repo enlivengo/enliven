@@ -1,4 +1,4 @@
-package assets
+package static
 
 import (
 	"net/http"
@@ -7,19 +7,19 @@ import (
 	"github.com/enlivengo/enliven/config"
 )
 
-// NewStaticApp Creates a new static asset app instance
-func NewStaticApp() *StaticApp {
-	return &StaticApp{}
+// NewApp Creates a new static asset app instance
+func NewApp() *App {
+	return &App{}
 }
 
-// StaticApp handles adding a route handler for static assets
-type StaticApp struct{}
+// App handles adding a route handler for static assets
+type App struct{}
 
 // Initialize sets up our app to ahndle static asset requests
-func (sa *StaticApp) Initialize(ev *enliven.Enliven) {
+func (sa *App) Initialize(ev *enliven.Enliven) {
 	var conf = config.Config{
 		"assets_static_route": "/static/",
-		"assets_static_path":  "./static/",
+		"assets_static_path":  "./static/", // Path relative to the executable
 	}
 
 	conf = config.UpdateConfig(config.MergeConfig(conf, config.GetConfig()))
@@ -34,6 +34,6 @@ func (sa *StaticApp) Initialize(ev *enliven.Enliven) {
 }
 
 // GetName returns the app's name
-func (sa *StaticApp) GetName() string {
+func (sa *App) GetName() string {
 	return "static"
 }
