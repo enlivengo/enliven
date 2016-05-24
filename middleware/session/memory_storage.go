@@ -12,7 +12,7 @@ import (
 
 var sessions map[string]*StoredSession
 
-// StoredSession represents a user's session in memory
+// StoredSession represents a session in memory
 type StoredSession struct {
 	mTime int32
 	data  map[string]string
