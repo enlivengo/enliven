@@ -25,7 +25,6 @@ func (c Core) New() Email {
 // Enabled returns whether or not we are configured for email
 func (c Core) Enabled() bool {
 	conf := config.GetConfig()
-	fmt.Println()
 	if conf["email_smtp_host"] != "" {
 		return true
 	}
