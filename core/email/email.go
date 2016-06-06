@@ -9,7 +9,9 @@ import (
 )
 
 // Core is the core functionality for sending emails.
-type Core struct{}
+type Core struct {
+	status string
+}
 
 // New creates a new self-contained email that can be sent to a user.
 func (c Core) New() Email {
@@ -24,12 +26,14 @@ func (c Core) New() Email {
 
 // Enabled returns whether or not we are configured for email
 func (c Core) Enabled() bool {
-	conf := config.GetConfig()
-	fmt.Println()
-	if conf["email_smtp_host"] != "" {
-		return true
+	if c.status == "" {
+		conf := config.GetConfig()
+		if conf["email_smtp_host"] != "" {
+			c.status = "enabled"
+		}
+		c.status = "disabled"
 	}
-	return false
+	return (c.status == "enabled")
 }
 
 // Email represents an email that someone wants to send
