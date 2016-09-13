@@ -1,6 +1,6 @@
 {{define "home"}}
 {{template "header" .}}
-<div class="home" style="text-align:center;">
+<div class="home">
     <strong>Welcome</strong>:
     {{if .Booleans.UserLoggedIn}}
         {{.Storage.User.GetDisplayName}}
