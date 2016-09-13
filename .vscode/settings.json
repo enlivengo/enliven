@@ -2,28 +2,17 @@
     "emeraldwalk.runonsave": {
         "commands": [
             {
-                "match": ".go",
-                "isAsync": false,
-                "cmd": "killall debug"
-            },
-            {
-                "match": ".go",
+                "match": ".go|.html",
                 "isAsync": false,
                 "cmd": "cd ${workspaceRoot} && go get"
             },
-            
             {
-                "match": ".html",
+                "match": ".go|.html",
                 "isAsync": false,
-                "cmd": "killall debug"
+                "cmd": "del ${workspaceRoot}\\core\\templates\\files\\files.go /F /Q"
             },
             {
-                "match": ".html",
-                "isAsync": false,
-                "cmd": "cd ${workspaceRoot} && rm -f ./core/templates/files/files.go"
-            },
-            {
-                "match": ".html",
+                "match": ".go|.html",
                 "isAsync": false,
                 "cmd": "cd ${workspaceRoot} && go generate ./..."
             }
