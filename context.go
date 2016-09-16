@@ -79,6 +79,12 @@ func (ctx *Context) NotFound() {
 	ctx.Template("notfound")
 }
 
+// BadRequest returns a 400 status and the bad-request page
+func (ctx *Context) BadRequest() {
+	ctx.Response.WriteHeader(http.StatusBadRequest)
+	ctx.Template("badrequest")
+}
+
 // --------------------------------------------------
 
 // CHandler Handles injecting the initial request context before passing handling on to the Middleware struct

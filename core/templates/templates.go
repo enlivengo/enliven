@@ -15,6 +15,7 @@ func New() *template.Template {
 	homeTemplate, _ := files.Asset("files/home.html")
 	forbiddenTemplate, _ := files.Asset("files/forbidden.html")
 	notfoundTemplate, _ := files.Asset("files/notfound.html")
+	badrequestTemplate, _ := files.Asset("files/badrequest.html")
 
 	templates := template.New("enliven")
 	templates.Parse(string(headerTemplate[:]))
@@ -22,6 +23,7 @@ func New() *template.Template {
 	templates.Parse(string(homeTemplate[:]))
 	templates.Parse(string(forbiddenTemplate[:]))
 	templates.Parse(string(notfoundTemplate[:]))
+	templates.Parse(string(badrequestTemplate[:]))
 
 	return templates
 }
