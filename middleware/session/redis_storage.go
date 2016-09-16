@@ -116,7 +116,7 @@ func (rsm *RedisStorageMiddleware) ServeHTTP(ctx *enliven.Context, next enliven.
 	} else {
 		existing = false
 		sID, _ = randutil.AlphaString(32)
-		cookie := http.Cookie{Name: "enlivenSession", Value: sID}
+		cookie := http.Cookie{Name: "enlivenSession", Value: sID, Path: "/"}
 		http.SetCookie(ctx.Response, &cookie)
 	}
 

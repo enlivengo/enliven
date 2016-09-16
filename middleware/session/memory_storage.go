@@ -121,7 +121,7 @@ func (msm *MemoryStorageMiddleware) ServeHTTP(ctx *enliven.Context, next enliven
 		sID = sessionID.Value
 	} else {
 		sID, _ = randutil.AlphaString(32)
-		cookie := http.Cookie{Name: "enlivenSession", Value: sID}
+		cookie := http.Cookie{Name: "enlivenSession", Value: sID, Path: "/"}
 		http.SetCookie(ctx.Response, &cookie)
 	}
 

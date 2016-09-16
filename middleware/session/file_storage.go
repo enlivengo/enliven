@@ -143,7 +143,7 @@ func (fsm *FileStorageMiddleware) ServeHTTP(ctx *enliven.Context, next enliven.N
 		sID = sessionID.Value
 	} else {
 		sID, _ = randutil.AlphaString(32)
-		cookie := http.Cookie{Name: "enlivenSession", Value: sID}
+		cookie := http.Cookie{Name: "enlivenSession", Value: sID, Path: "/"}
 		http.SetCookie(ctx.Response, &cookie)
 	}
 
