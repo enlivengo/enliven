@@ -85,6 +85,12 @@ func (ctx *Context) BadRequest() {
 	ctx.Template("badrequest")
 }
 
+// EmptyOK outputs a 200 status with nothing else
+func (ctx *Context) EmptyOK() {
+	ctx.Response.WriteHeader(http.StatusOK)
+	ctx.String("")
+}
+
 // --------------------------------------------------
 
 // CHandler Handles injecting the initial request context before passing handling on to the Middleware struct
