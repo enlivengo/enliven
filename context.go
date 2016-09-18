@@ -42,7 +42,7 @@ func (ctx *Context) AnonymousTemplate(tmpl *template.Template) {
 // ExecuteBaseTemplate sets up HTML headers and outputs an html/template response for a specific template definition
 func (ctx *Context) ExecuteBaseTemplate(templateName string) {
 	ctx.Response.Header().Set("Content-Type", "text/html")
-	err := ctx.Enliven.Core.BaseTemplate.ExecuteTemplate(ctx.Response, templateName, ctx)
+	err := ctx.Enliven.Core.TemplateManager.BaseTemplate.ExecuteTemplate(ctx.Response, templateName, ctx)
 	if err != nil {
 		ctx.String(err.Error())
 	}
@@ -50,8 +50,8 @@ func (ctx *Context) ExecuteBaseTemplate(templateName string) {
 
 // ExecuteTemplate gets a specific template from our list of templates and executes it
 func (ctx *Context) ExecuteTemplate(templateName string) {
-	if _, ok := ctx.Enliven.Core.Templates[templateName]; ok {
-		ctx.Enliven.Core.Templates[templateName].Execute(ctx.Response, ctx)
+	if _, ok := ctx.Enliven.Core.TemplateManager.Templates[templateName]; ok {
+		ctx.Enliven.Core.TemplateManager.Templates[templateName].Execute(ctx.Response, ctx)
 	} else {
 		panic("Attempt to execute template that does not exist: " + templateName)
 	}
@@ -79,19 +79,19 @@ func (ctx *Context) Redirect(location string, status ...int) {
 // Forbidden returns a 403 status and the forbidden page.
 func (ctx *Context) Forbidden() {
 	ctx.Response.WriteHeader(http.StatusForbidden)
-	ctx.Template("forbidden")
+	ctx.ExecuteBaseTemplate("forbidden")
 }
 
 // NotFound returns a 404 status and the not-found page
 func (ctx *Context) NotFound() {
 	ctx.Response.WriteHeader(http.StatusNotFound)
-	ctx.Template("notfound")
+	ctx.ExecuteBaseTemplate("notfound")
 }
 
 // BadRequest returns a 400 status and the bad-request page
 func (ctx *Context) BadRequest() {
 	ctx.Response.WriteHeader(http.StatusBadRequest)
-	ctx.Template("badrequest")
+	ctx.ExecuteBaseTemplate("badrequest")
 }
 
 // EmptyOK outputs a 200 status with nothing else

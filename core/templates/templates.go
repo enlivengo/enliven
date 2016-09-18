@@ -8,8 +8,22 @@ import (
 
 //go:generate go-bindata -o files/files.go -pkg files files/...
 
-// New returns an instance of core templates
-func New() *template.Template {
+// TemplateManager manages our templates
+type TemplateManager struct {
+	BaseTemplate *template.Template
+	Templates    map[string]*template.Template
+}
+
+// CreateTemplate duplicates the base template, parses templates text into it, and stores it as a new template
+func (tm TemplateManager) CreateTemplate(name string, text string) {
+	newTemplate := template.New(name)
+	*newTemplate = *tm.BaseTemplate
+	newTemplate.Parse(text)
+	tm.Templates[name] = newTemplate
+}
+
+// NewTemplateManager returns an instance of our temlate manager
+func NewTemplateManager() TemplateManager {
 	headerTemplate, _ := files.Asset("files/header.html")
 	footerTemplate, _ := files.Asset("files/footer.html")
 	homeTemplate, _ := files.Asset("files/home.html")
@@ -25,5 +39,10 @@ func New() *template.Template {
 	baseTemplate.Parse(string(notfoundTemplate[:]))
 	baseTemplate.Parse(string(badrequestTemplate[:]))
 
-	return baseTemplate
+	tm := TemplateManager{
+		BaseTemplate: baseTemplate,
+		Templates:    make(map[string]*template.Template),
+	}
+
+	return tm
 }
