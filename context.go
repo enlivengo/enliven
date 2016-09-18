@@ -51,7 +51,10 @@ func (ctx *Context) ExecuteBaseTemplate(templateName string) {
 // ExecuteTemplate gets a specific template from our list of templates and executes it
 func (ctx *Context) ExecuteTemplate(templateName string) {
 	if _, ok := ctx.Enliven.Core.TemplateManager.Templates[templateName]; ok {
-		ctx.Enliven.Core.TemplateManager.Templates[templateName].Execute(ctx.Response, ctx)
+		err := ctx.Enliven.Core.TemplateManager.Templates[templateName].Execute(ctx.Response, ctx)
+		if err != nil {
+			panic(err)
+		}
 	} else {
 		panic("Attempt to execute template that does not exist: " + templateName)
 	}
