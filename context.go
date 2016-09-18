@@ -39,12 +39,21 @@ func (ctx *Context) AnonymousTemplate(tmpl *template.Template) {
 	}
 }
 
-// Template sets up HTML headers and outputs an html/template response for a specific template definition
-func (ctx *Context) Template(templateName string) {
+// ExecuteBaseTemplate sets up HTML headers and outputs an html/template response for a specific template definition
+func (ctx *Context) ExecuteBaseTemplate(templateName string) {
 	ctx.Response.Header().Set("Content-Type", "text/html")
-	err := ctx.Enliven.Core.Templates.ExecuteTemplate(ctx.Response, templateName, ctx)
+	err := ctx.Enliven.Core.BaseTemplate.ExecuteTemplate(ctx.Response, templateName, ctx)
 	if err != nil {
 		ctx.String(err.Error())
+	}
+}
+
+// ExecuteTemplate gets a specific template from our list of templates and executes it
+func (ctx *Context) ExecuteTemplate(templateName string) {
+	if _, ok := ctx.Enliven.Core.Templates[templateName]; ok {
+		ctx.Enliven.Core.Templates[templateName].Execute(ctx.Response, ctx)
+	} else {
+		panic("Attempt to execute template that does not exist: " + templateName)
 	}
 }
 

@@ -17,13 +17,13 @@ func New() *template.Template {
 	notfoundTemplate, _ := files.Asset("files/notfound.html")
 	badrequestTemplate, _ := files.Asset("files/badrequest.html")
 
-	templates := template.New("enliven")
-	templates.Parse(string(headerTemplate[:]))
-	templates.Parse(string(footerTemplate[:]))
-	templates.Parse(string(homeTemplate[:]))
-	templates.Parse(string(forbiddenTemplate[:]))
-	templates.Parse(string(notfoundTemplate[:]))
-	templates.Parse(string(badrequestTemplate[:]))
+	baseTemplate := template.New("enliven")
+	baseTemplate.Parse(string(headerTemplate[:]))
+	baseTemplate.Parse(string(footerTemplate[:]))
+	baseTemplate.Parse(string(homeTemplate[:]))
+	baseTemplate.Parse(string(forbiddenTemplate[:]))
+	baseTemplate.Parse(string(notfoundTemplate[:]))
+	baseTemplate.Parse(string(badrequestTemplate[:]))
 
-	return templates
+	return baseTemplate
 }
