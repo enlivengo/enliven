@@ -16,8 +16,7 @@ type TemplateManager struct {
 
 // CreateTemplate duplicates the base template, parses templates text into it, and stores it as a new template
 func (tm TemplateManager) CreateTemplate(name string, text string) {
-	newTemplate := template.New(name)
-	*newTemplate = *tm.BaseTemplate
+	newTemplate, _ := tm.BaseTemplate.Clone()
 	newTemplate.Parse(text)
 	tm.Templates[name] = newTemplate
 }
