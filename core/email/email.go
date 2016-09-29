@@ -17,6 +17,7 @@ func (c Core) New() Email {
 		panic("Email functionality has not been configured.")
 	}
 	conf := config.GetConfig()
+	fmt.Println(conf["email_from_default"])
 	return Email{
 		From: conf["email_from_default"],
 	}
@@ -79,7 +80,7 @@ func (e *Email) Send() error {
 		if err != nil {
 			return err
 		}
-		if _, err = fmt.Fprintf(messageWriter, "Subject: "+e.Subject+"\n\n"+e.Message+"\n"); err != nil {
+		if _, err = fmt.Fprintf(messageWriter, "From: "+e.From+"\nSubject: "+e.Subject+"\n\n"+e.Message+"\n"); err != nil {
 			return err
 		}
 		if err = messageWriter.Close(); err != nil {
@@ -94,14 +95,21 @@ func (e *Email) Send() error {
 		return nil
 	}
 
+	fmt.Println(e)
+	fmt.Println(e.From)
+
 	auth := smtp.PlainAuth(conf["email_smtp_identity"], conf["email_smtp_username"], conf["email_smtp_password"], conf["email_smtp_host"])
-	message := []byte("Subject: " + e.Subject + "\r\n\r\n" + e.Message + "\r\n")
+	message := []byte("From: " + e.From + "\nSubject: " + e.Subject + "\r\n\r\n" + e.Message + "\r\n")
 	err := smtp.SendMail(conf["email_smtp_host"]+":"+conf["email_smtp_port"], auth, e.From, e.To, message)
 
 	// If we failed with encryption error, and the setting for insecurity is allowed, we insecure send it (recommended only for testing)
-	if err.Error() == "unencrypted connection" && conf["email_allow_insecure"] == "1" {
+	if err != nil && err.Error() == "unencrypted connection" && conf["email_allow_insecure"] == "1" {
 		uAuth := unencryptedAuth{auth}
 		err = smtp.SendMail(conf["email_smtp_host"]+":"+conf["email_smtp_port"], uAuth, e.From, e.To, message)
+	}
+
+	if err != nil {
+		fmt.Println(err)
 	}
 
 	return err
