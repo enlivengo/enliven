@@ -104,10 +104,6 @@ func (e *Email) Send() error {
 		err = smtp.SendMail(conf["email_smtp_host"]+":"+conf["email_smtp_port"], uAuth, e.From, e.To, message)
 	}
 
-	if err != nil {
-		fmt.Println(err)
-	}
-
 	return err
 }
 
