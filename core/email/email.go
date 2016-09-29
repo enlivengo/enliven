@@ -17,7 +17,6 @@ func (c Core) New() Email {
 		panic("Email functionality has not been configured.")
 	}
 	conf := config.GetConfig()
-	fmt.Println(conf["email_from_default"])
 	return Email{
 		From: conf["email_from_default"],
 	}
@@ -94,9 +93,6 @@ func (e *Email) Send() error {
 
 		return nil
 	}
-
-	fmt.Println(e)
-	fmt.Println(e.From)
 
 	auth := smtp.PlainAuth(conf["email_smtp_identity"], conf["email_smtp_username"], conf["email_smtp_password"], conf["email_smtp_host"])
 	message := []byte("From: " + e.From + "\nSubject: " + e.Subject + "\r\n\r\n" + e.Message + "\r\n")
