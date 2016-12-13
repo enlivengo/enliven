@@ -108,7 +108,7 @@ func filesFooterHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "files/footer.html", size: 181, mode: os.FileMode(438), modTime: time.Unix(1473752257, 0)}
+	info := bindataFileInfo{name: "files/footer.html", size: 181, mode: os.FileMode(438), modTime: time.Unix(1481646615, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -148,7 +148,7 @@ func filesHeaderHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "files/header.html", size: 2886, mode: os.FileMode(438), modTime: time.Unix(1473752902, 0)}
+	info := bindataFileInfo{name: "files/header.html", size: 2886, mode: os.FileMode(438), modTime: time.Unix(1481647019, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }

@@ -6,7 +6,7 @@ import (
 	"github.com/enlivengo/enliven/core/templates/files"
 )
 
-//go:generate go-bindata -o files/files.go -pkg files files/...
+//go:generate go-bindata -o files/files.go -ignore .go -pkg files files/...
 
 // TemplateManager manages our templates
 type TemplateManager struct {
