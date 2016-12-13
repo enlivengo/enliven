@@ -88,7 +88,7 @@ func filesBadrequestHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "files/badrequest.html", size: 174, mode: os.FileMode(438), modTime: time.Unix(1474009677, 0)}
+	info := bindataFileInfo{name: "files/badrequest.html", size: 174, mode: os.FileMode(438), modTime: time.Unix(1481649041, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -108,7 +108,7 @@ func filesFooterHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "files/footer.html", size: 181, mode: os.FileMode(438), modTime: time.Unix(1481646615, 0)}
+	info := bindataFileInfo{name: "files/footer.html", size: 181, mode: os.FileMode(438), modTime: time.Unix(1481648014, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -128,7 +128,7 @@ func filesForbiddenHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "files/forbidden.html", size: 166, mode: os.FileMode(438), modTime: time.Unix(1473318898, 0)}
+	info := bindataFileInfo{name: "files/forbidden.html", size: 166, mode: os.FileMode(438), modTime: time.Unix(1481649044, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -148,7 +148,7 @@ func filesHeaderHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "files/header.html", size: 2886, mode: os.FileMode(438), modTime: time.Unix(1481647019, 0)}
+	info := bindataFileInfo{name: "files/header.html", size: 2886, mode: os.FileMode(438), modTime: time.Unix(1481648009, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -168,7 +168,7 @@ func filesHomeHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "files/home.html", size: 242, mode: os.FileMode(438), modTime: time.Unix(1473752247, 0)}
+	info := bindataFileInfo{name: "files/home.html", size: 242, mode: os.FileMode(438), modTime: time.Unix(1481649048, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -188,7 +188,7 @@ func filesNotfoundHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "files/notfound.html", size: 164, mode: os.FileMode(438), modTime: time.Unix(1473318898, 0)}
+	info := bindataFileInfo{name: "files/notfound.html", size: 164, mode: os.FileMode(438), modTime: time.Unix(1481649052, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
