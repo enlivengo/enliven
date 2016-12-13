@@ -9,11 +9,6 @@
             {
                 "match": ".go|.html",
                 "isAsync": false,
-                "cmd": "del ${workspaceRoot}\\core\\templates\\files\\files.go /F /Q"
-            },
-            {
-                "match": ".go|.html",
-                "isAsync": false,
                 "cmd": "cd ${workspaceRoot} && go generate ./..."
             }
         ]
