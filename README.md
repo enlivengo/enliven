@@ -18,6 +18,12 @@
 
 ## Project State
 
-* Enliven is currently in an alpha/experimental development stage.
-* Once the framework is feature complete there will be a short beta to gather feedback and fix issues.
-* Release date is "when it's done," but will adhere to "release early, release often."
+* Enliven is mainly a personal project custom tailored to my personal desires/needs.
+* As such, I consider this a production-ready, mature project, and currently have some
+* closed-source projects which are presently using it. I don't see myself writing a
+* whole pile of documentation for it unless it magically gains a following and users
+* request documentation.
+
+* Future updates will consist of features I want to add to the framework in addition
+* to bug fixes, etc. Again, I'm totally open to adding requested features as well,
+* though that would require the aforementioned magical following gains.
